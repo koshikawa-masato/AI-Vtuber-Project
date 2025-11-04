@@ -1,0 +1,153 @@
+# Environment variables (contains API keys)
+.env
+.env.local
+.env.*.local
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+
+# Backup and archive directories
+backup/
+backups/
+archived/
+COPY_ROBOT_*.db
+*_BEFORE_RESTORE.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+# === Botan Project Specific ===
+
+# Copy robot execution results
+copy_robots/
+
+# Snapshots and results
+snapshots/
+results/
+test_datasets/
+
+# Decision records (private)
+決議_*/
+
+# Date-based temporary folders
+2025-*/
+
+# Claude Code settings
+.claude/
+
+# Private diaries (kirinuki daily logs)
+**/日記/
+
+# === Other Projects (Exclude from Botan Project) ===
+
+# Other TTS/Voice projects
+GPT-SoVITS/
+Style-Bert-VITS2/
+Style-Bert-VITS2-v2/
+fish-speech/
+tts_manager/
+voice_free/
+venv_webui/
+
+# Other projects
+youtube_learning_system/
+
+# === Root Directory Cleanup ===
+
+# IMPORTANT: Internal documentation (DO NOT PUBLISH)
+CLAUDE.md
+CLAUDE.md.backup_*
+
+# Test reports and benchmarks
+HALLUCINATION_SYSTEM_TEST_REPORT_*.md
+HALLUCINATION_SYSTEM_CRITICAL_ISSUE_*.md
+BENCHMARK_SUMMARY.md
+
+# Old implementation plans
+OPTION_A_IMPLEMENTATION_PLAN.md
+HANDOFF_TO_IMPLEMENTATION.md
+FINAL_CONCLUSIONS.md
+DESIGN_UPDATE_v2.md
+FULL_IMPLEMENTATION_ARCHITECTURE.md
+Phase_2.0_*.md
+
+# Phase D working documents (moved to docs/)
+Phase_D_100件イベント_INSERT.sql
+Phase_D_イベントマスター_INDEX.md
+Phase_D_カテゴリ*.md
+Phase_D_主要イベントマスター設計書_テンプレート.md
+Phase_D_Google_Colab版記憶生成システム設計書.md
+Phase_D_うちの牡丹を作るひな形プロセス.md
+Phase_D_データベーススキーマ.sql
+
+# Usage guides (covered by README)
+COPY_ROBOT_VIEWER_USAGE.md
+KASHO_CHAT_README.md
+QUICK_START.md
+README_*.md
+PACKAGE_MANIFEST.md
+SUBCULTURE_DB_SETUP.md
+SENSITIVE_TRAINING_GUIDE.md
+
+# Backup files
+*.backup_*
+CLAUDE.md.backup_*
+
+# PDF and Zone.Identifier files
+*.pdf
+*.pdf:Zone.Identifier
+
+# Old design docs (redundant)
+100の記憶を創り出す質問設計書.md
+Colab牡丹思考レベル別テスト手順書.md
+COMPLETE_VIEWING_HISTORY_DESIGN.md
+ユーザージャーニー_プロトタイプから育成まで.md
+三姉妹AI キャラクター設定仕様書.md
+三姉妹人格形成パターン設計書.md
+三姉妹呼称統一仕様書.md
+三姉妹誕生日設定仕様書.md
+戦略転換_本質的目的の再確認.md
+改善アクションプラン.md
+時限的利用者向け記憶補完システム設計書.md
+牡丹コア実装仕様書.md
+牡丹システム_Qwenモデル使い分け設計書.md
+牡丹二層構造_Ollama環境構築手順書.md
+牡丹実践計画書.md
+設計日記_*.md
+開発者プロファイル_相棒が見た本質.md
