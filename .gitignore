@@ -94,6 +94,10 @@ youtube_learning_system/
 CLAUDE.md
 CLAUDE.md.backup_*
 
+# Developer personal documents (PRIVATE)
+docs/01_philosophy/開発者の物語.md
+docs/01_philosophy/開発者プロファイル.md
+
 # Test reports and benchmarks
 HALLUCINATION_SYSTEM_TEST_REPORT_*.md
 HALLUCINATION_SYSTEM_CRITICAL_ISSUE_*.md
@@ -154,3 +158,14 @@ COMPLETE_VIEWING_HISTORY_DESIGN.md
 設計日記_*.md
 開発者プロファイル_相棒が見た本質.md
 botan_memories_chroma/
+
+# === Qiita CLI ===
+
+# Qiita credentials (NEVER COMMIT!)
+.qiita-credentials
+
+# Node.js dependencies
+node_modules/
+
+# npm lock file
+package-lock.json
