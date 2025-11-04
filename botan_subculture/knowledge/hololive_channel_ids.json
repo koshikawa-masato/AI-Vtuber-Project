@@ -1,0 +1,90 @@
+{
+  "_note": "YouTube Channel IDs for Hololive members",
+  "_source": "Official Hololive channels as of 2025-10",
+
+  "channels": {
+    "gen0": [
+      {"name": "ときのそら", "channel_id": "UCp6993wxpyDPHUpavwDFqgg", "handle": "@TokinoSora"},
+      {"name": "ロボ子さん", "channel_id": "UCDqI2jOz0weumE8s7paEk6g", "handle": "@Robocosan"},
+      {"name": "アキ・ローゼンタール", "channel_id": "UCFTLzh12_nrtzqBPsTCqenA", "handle": "@AkiRosenthal"},
+      {"name": "赤井はあと", "channel_id": "UC1CfXB_kRs3C-zaeTG3oGyg", "handle": "@AkaiHaato"},
+      {"name": "星街すいせい", "channel_id": "UC5CwaMl1eIgY8h02uZw7u8A", "handle": "@HoshimachiSuisei"}
+    ],
+
+    "gen1": [
+      {"name": "白上フブキ", "channel_id": "UCdn5BQ06XqgXoAxIhbqw5Rg", "handle": "@ShirakamiFubuki"},
+      {"name": "夏色まつり", "channel_id": "UCQ0UDLQCjY0rmuxCDE38FGg", "handle": "@NatsuiroMatsuri"},
+      {"name": "百鬼あやめ", "channel_id": "UC7fk0CB07ly8oSl0aqKkqFg", "handle": "@NakiriAyame"},
+      {"name": "癒月ちょこ", "channel_id": "UC1suqwovbL1kzsoaZgFZLKg", "handle": "@YuzukiChoco"},
+      {"name": "大空スバル", "channel_id": "UCvzGlP9oQwU--Y0r9id_jnA", "handle": "@OozoraSubaru"}
+    ],
+
+    "gen2": [
+      {"name": "AZKi", "channel_id": "UC0TXe_LYZ4scaW2XMyi5_kw", "handle": "@AZKi"},
+      {"name": "さくらみこ", "channel_id": "UC-hM6YJuNYVAmUWxeIr9FeA", "handle": "@SakuraMiko"}
+    ],
+
+    "gamers": [
+      {"name": "大神ミオ", "channel_id": "UCp-5t9SrOQwXMU7iIjQfARg", "handle": "@OokamiMio"},
+      {"name": "猫又おかゆ", "channel_id": "UCvaTdHTWBGv3MKj3KVqJVCw", "handle": "@NekomataOkayu"},
+      {"name": "戌神ころね", "channel_id": "UChAnqc_AY5_I3Px5dig3X1Q", "handle": "@InugamiKorone"}
+    ],
+
+    "gen3": [
+      {"name": "兎田ぺこら", "channel_id": "UC1DCedRgGHBdm81E1llLhOQ", "handle": "@UsadaPekora"},
+      {"name": "不知火フレア", "channel_id": "UCvInZx9h3jC2JzsIzoOebWg", "handle": "@ShiranuiFlare"},
+      {"name": "白銀ノエル", "channel_id": "UCdyqAaZDKHXg4Ahi7VENThQ", "handle": "@ShiroganeNoel"},
+      {"name": "宝鐘マリン", "channel_id": "UCCzUftO8KOVkV4wQG1vkUvg", "handle": "@HoushouMarine"}
+    ],
+
+    "gen4": [
+      {"name": "天音かなた", "channel_id": "UCZlDXzGoo7d44bwdNObFacg", "handle": "@AmaneKanata"},
+      {"name": "角巻わため", "channel_id": "UCqm3BQLlJfvkTsX_hvm0UmA", "handle": "@TsunomakiWatame"},
+      {"name": "常闇トワ", "channel_id": "UC1uv2Oq6kNxgATlCiez59hw", "handle": "@TokoyamiTowa"},
+      {"name": "姫森ルーナ", "channel_id": "UCa9Y57gfeY0Zro_noHRVrnw", "handle": "@HimemoriLuna"}
+    ],
+
+    "gen5": [
+      {"name": "雪花ラミィ", "channel_id": "UCFKOVgVbGmX65RxO3EtH3iw", "handle": "@YukihanaLamy"},
+      {"name": "桃鈴ねね", "channel_id": "UCAWSyEs_Io8MtpY3m-zqILA", "handle": "@MomosuzuNene"},
+      {"name": "獅白ぼたん", "channel_id": "UCUKD-uaobj9jiqB-VXt71mA", "handle": "@ShishiroBotan"},
+      {"name": "尾丸ポルカ", "channel_id": "UCK9V2B22uJYu3N7eR_BT9QA", "handle": "@OmaruPolka"}
+    ],
+
+    "holoX": [
+      {"name": "ラプラス・ダークネス", "channel_id": "UCENwRMx5Yh42zWpzURebzTw", "handle": "@LaPlus"},
+      {"name": "鷹嶺ルイ", "channel_id": "UCs9_O1tRPMQTHQ-N_L6FU2g", "handle": "@TakaneLui"},
+      {"name": "博衣こより", "channel_id": "UC6eWCld0KwmyHFbAqK3V-Rw", "handle": "@HakuiKoyori"},
+      {"name": "風真いろは", "channel_id": "UC_vMYWcDjmfdpH6r4TTn1MQ", "handle": "@KazamaIroha"}
+    ],
+
+    "regloss": [
+      {"name": "音乃瀬奏", "channel_id": "UCWQtYtq9EOB4-I5P-3fh8lA", "handle": "@OtonoseKanade"},
+      {"name": "一条莉々華", "channel_id": "UCtyWhCj3AqKh2dXctLkDtng", "handle": "@IchijoRirika"},
+      {"name": "儒烏風亭らでん", "channel_id": "UCdXAk5MpyLD8594lm_OvtGQ", "handle": "@JuufuuteiRaden"},
+      {"name": "轟はじめ", "channel_id": "UC1iA6_NT4mtAcIII6ygrvCw", "handle": "@TodorokiHajime"},
+      {"name": "火威青", "channel_id": "UCMGfV7TVTmHhEErVJg1oHBQ", "handle": "@HiodoshiAo"}
+    ],
+
+    "flowglow": [
+      {"name": "虎金妃笑虎", "channel_id": "UCnvVG9RbOW3J6Ifqo-zKLiw", "handle": "@IslaColeman"},
+      {"name": "千歳ニコ", "channel_id": "UCllKI7VjXjJJ13cVaXqxmAg", "handle": "@ChiharaNico"},
+      {"name": "輪堂壱哉", "channel_id": "UCJhO4bkd93h0A-QauxJcMJA", "handle": "@RindouMikoto"},
+      {"name": "綺々羅々ヴィヴィ", "channel_id": "UC4PrHGUCEfV3hqN6zo0dZdA", "handle": "@KikakuVivi"},
+      {"name": "立花みちる", "channel_id": "UCCbOjJEcqh3w8w6FfJmZNpw", "handle": "@KoganikaneNiko"}
+    ],
+
+    "official": [
+      {"name": "hololive ホロライブ - VTuber Group", "channel_id": "UCJFZiqLMntJufDCHc6bQixg", "handle": "@hololive"}
+    ]
+  },
+
+  "total_count": 31,
+
+  "notes": {
+    "flowglow": "FlowGlow is the newest generation (debuted 2024-09) - NAMES AND CHANNEL IDS NEED VERIFICATION",
+    "regloss": "ReGLOSS debuted 2023-09 - Fixed: Changed 響咲リオナ to correct name 火威青",
+    "graduates_not_included": "Graduated members (Fauna, Shion, Nodoka) are excluded from active channel list",
+    "warning": "ReGLOSS and FlowGlow channel IDs may need further verification"
+  }
+}

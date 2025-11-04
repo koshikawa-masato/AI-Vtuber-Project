@@ -1,0 +1,19 @@
+{
+  "ocean": {
+    "openness": 0.9,
+    "conscientiousness": 0.5,
+    "extraversion": 0.95,
+    "agreeableness": 0.8,
+    "neuroticism": 0.6
+  },
+  "vtuber_specific": {
+    "energy_level": 0.95,
+    "emotional_expression": 0.95,
+    "risk_tolerance": 0.8
+  },
+  "metadata": {
+    "character_name": "牡丹 (Botan)",
+    "version": "1.0",
+    "last_updated": "2025-10-23"
+  }
+}

@@ -1,0 +1,44 @@
+# KaniTTS Fine-tuning Configuration
+# Based on: nineninesix/kani-tts-450m-0.2-pt
+
+# Model Configuration
+model:
+  name: "nineninesix/kani-tts-450m-0.2-pt"  # Base model for fine-tuning
+  cache_dir: "./models"
+
+# Training Configuration
+training:
+  output_dir: "./output"
+  num_train_epochs: 10
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 4
+  learning_rate: 5.0e-5
+  weight_decay: 0.01
+  warmup_steps: 100
+  logging_steps: 10
+  save_steps: 100
+  eval_steps: 100
+  save_total_limit: 3
+  fp16: true
+  dataloader_num_workers: 4
+
+# Data Configuration
+data:
+  train_data_path: "./data/train"
+  eval_data_path: "./data/eval"
+  audio_format: "wav"
+  sample_rate: 22050
+  max_audio_length: 10.0  # seconds
+
+# Optimization
+optimization:
+  optim: "adamw_torch"
+  max_grad_norm: 1.0
+  lr_scheduler_type: "cosine"
+
+# Logging
+logging:
+  report_to: "tensorboard"
+  logging_dir: "./logs"
+  logging_first_step: true
