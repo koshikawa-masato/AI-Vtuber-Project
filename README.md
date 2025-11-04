@@ -332,7 +332,7 @@ MIT License
 - **qwen2.5**: Alibaba Cloudの高性能LLM
 - **ElevenLabs**: 高品質TTS API
 - **Whisper**: OpenAIの音声認識
-- **VTuber文化**: 赤井はあと、ホロライブ、にじさんじ、ずんだもん等からの学び
+- **VTuber文化**: 企業系・個人系Vtuber達からの学び
 
 ---
 
