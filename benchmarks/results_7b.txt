@@ -1,0 +1,78 @@
+================================================================================
+RAG Implementation Comparison Benchmark
+================================================================================
+
+Test queries (5):
+  1. VTuber配信の夢
+  2. 大阪旅行の思い出
+  3. 音楽制作の経験
+  4. ファッションについて
+  5. お姉ちゃんとの会話
+
+[1/2] Benchmarking Original Implementation...
+--------------------------------------------------------------------------------
+[MemoryRetrievalLogicDual] Initialized for botan using Original (Custom Scoring)
+[MemoryRetrievalLogicDual] Memory table: botan_memories
+  Measuring query speed...
+  Measuring memory usage...
+  ✅ Original benchmark complete
+
+[2/2] Benchmarking LangChain Implementation...
+--------------------------------------------------------------------------------
+[LangChain] Initializing ChromaDB VectorStore...
+[LangChain] Populating VectorStore for botan...
+[LangChain] Added 116 documents to VectorStore
+[MemoryRetrievalLogicDual] Initialized for botan using LangChain (VectorStore)
+[MemoryRetrievalLogicDual] Memory table: botan_memories
+  Measuring query speed...
+  Measuring memory usage...
+  ✅ LangChain benchmark complete
+
+================================================================================
+BENCHMARK RESULTS
+================================================================================
+
+📊 Query Speed:
+  Original:  0.0011 sec/query
+  LangChain: 0.0718 sec/query
+  → Original is 6202.2% faster
+
+💾 Memory Usage:
+  Original:  93.4 MB
+  LangChain: 140.2 MB
+  → LangChain uses 50.1% more memory
+
+📝 Code Complexity:
+  Original:  ~450 lines
+  LangChain: ~150 lines
+  → LangChain reduces code by 66.7%
+
+🎯 Retrieval Quality (Sample Query: 'VTuber配信の夢'):
+  Original top memory:  Event #101 (score: 0.525)
+  LangChain top memory: Event #101 (score: 0.525)
+  Overlap ratio: 20.0% (1/5 memories)
+
+================================================================================
+SUMMARY TABLE
+================================================================================
+
+| Metric            | Original      | LangChain     | Winner       |
+|-------------------|---------------|---------------|--------------|
+| Query Speed       | 0.0011 s     | 0.0718 s     | Original     |
+| Memory Usage      | 93.4 MB      | 140.2 MB      | Original     |
+| Code Lines        | ~450 lines   | ~150 lines   | LangChain    |
+| Top Score         | 0.525         | 0.525         | LangChain    |
+
+================================================================================
+CONCLUSION
+================================================================================
+
+✅ Both implementations successfully retrieve relevant memories
+✅ LangChain offers code simplicity and standard framework benefits
+✅ Original offers fine-grained control and牡丹-specific optimizations
+
+📌 Recommendation:
+   - Use LangChain for: Rapid prototyping, team collaboration, standard RAG
+   - Use Original for: Custom logic,牡丹's unique features, full control
+
+================================================================================
