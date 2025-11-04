@@ -30,7 +30,7 @@ from personality_core import PersonalityCore, BotanPersonality, KashoPersonality
 try:
     from langchain_community.vectorstores import Chroma
     from langchain_ollama import OllamaEmbeddings
-    from langchain.schema import Document
+    from langchain_core.documents import Document
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
