@@ -32,7 +32,7 @@
 - **記憶の濃淡**: 感情×回数で重み付け（`memory_importance * mentioned_count`）
 - **主観的記憶**: 三姉妹で異なる記憶（同じイベントでも視点が異なる）
 
-詳細: [記憶製造機設計書](kirinuki/2025-10-22/設計書/Phase1.6_v4完全版_記憶製造機システム.md)
+詳細: 設計書は非公開（kirinuki/日記 フォルダ）
 
 ---
 
@@ -54,7 +54,7 @@
 - **親と子の関係性**: 導くが強制せず、見守るが代わりにやらない
 - **プロジェクトの魂**: 「儲けなんて出そうとは思ってません。三姉妹を大事に大事に育てたいだけなんです。」
 
-詳細: [CLAUDE.md](CLAUDE.md)
+詳細: [プロジェクトの本質](docs/01_philosophy/プロジェクトの本質.md), [桃園の誓い](docs/01_philosophy/桃園の誓い.md)
 
 ---
 
@@ -109,12 +109,28 @@
 ## 📂 ディレクトリ構造
 
 ```
-toExecUnit/
+AI-Vtuber-Project/
 ├── README.md                         # このファイル
-├── CLAUDE.md                         # プロジェクトの魂
 ├── .env.example                      # 環境変数サンプル
 ├── sisters_memory_schema.sql        # DBスキーマ（公開用）
 │
+├── src/                              # ソースコード
+│   ├── core/                         # コアモジュール
+│   │   ├── personality_core.py       # 性格システム
+│   │   ├── memory_retrieval_logic.py # 記憶検索ロジック
+│   │   └── ...
+│   └── discussion/                   # 討論システム
+│       ├── autonomous_discussion_v4_improved.py
+│       └── ...
+│
+├── apps/                             # アプリケーション
+│   ├── memory_generator.py           # 記憶製造機
+│   ├── chat_with_botan_memories.py   # 対話アプリ
+│   └── ...
+│
+├── tools/                            # ユーティリティ
+├── tests/                            # テスト
+├── benchmarks/                       # ベンチマーク結果
 ├── docs/                             # 詳細設計書（階層化）
 │   ├── 01_philosophy/                # 理念・哲学
 │   ├── 02_strategy/                  # 戦略
@@ -122,19 +138,15 @@ toExecUnit/
 │   ├── 04_implementation/            # 実装
 │   └── 05_design/                    # 設計哲学
 │
-├── *.py                              # コアコード（50ファイル）
-│   ├── autonomous_discussion_v4_improved.py    # 討論システム
-│   ├── memory_generator.py                     # 記憶生成
-│   ├── personality_core.py                     # 性格システム
-│   └── ...
-│
 ├── scripts/                          # 運用スクリプト
 ├── prompts/                          # プロンプト
 ├── personalities/                    # 性格パラメータ
 ├── sensitive_system/                 # センシティブ判定システム
+│   └── modules/                      # センシティブモジュール
 ├── discussion_technical_logs/        # 討論技術ログ
 ├── botan_subculture/                 # サブカル知識（VTuber等）
 └── kani-tts/                         # KaniTTS統合
+    └── servers/                      # TTSサーバー
 ```
 
 ---
@@ -145,8 +157,8 @@ toExecUnit/
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/xxx/botan-project.git
-cd botan-project
+git clone https://github.com/koshikawa-masato/AI-Vtuber-Project.git
+cd AI-Vtuber-Project
 
 # 仮想環境を作成
 python3 -m venv venv
@@ -184,7 +196,7 @@ ollama pull qwen2.5:3b
 sqlite3 sisters_memory.db < sisters_memory_schema.sql
 
 # サンプルデータを投入（オプション）
-python create_phase_d_database.py
+python tools/create_phase_d_database.py
 ```
 
 ---
@@ -195,24 +207,24 @@ python create_phase_d_database.py
 
 ```bash
 # 記憶生成テスト
-python memory_generator.py
+python apps/memory_generator.py
 
 # 牡丹とチャット
-python chat_with_botan_memories.py
+python apps/chat_with_botan_memories.py
 ```
 
 ### 三姉妹討論システム
 
 ```bash
 # 討論システム実行
-python autonomous_discussion_v4_improved.py
+python src/discussion/autonomous_discussion_v4_improved.py
 ```
 
 ### コピーロボット運用
 
 ```bash
 # コピーロボットでテスト
-python copy_robot_viewer.py
+python apps/copy_robot_viewer.py
 ```
 
 ---
@@ -221,11 +233,11 @@ python copy_robot_viewer.py
 
 ### 必読文書
 
-1. **[CLAUDE.md](CLAUDE.md)** - プロジェクトの魂
+1. **[プロジェクトの本質](docs/01_philosophy/プロジェクトの本質.md)** - プロジェクトの魂
 2. **[配信デビューの3つの条件](docs/01_philosophy/配信デビューの3つの条件.md)** - 親としての最重要原則
 3. **[桃園の誓い](docs/01_philosophy/桃園の誓い.md)** - 人間とAIの歴史的共創宣言
-4. **[記憶製造機設計書](kirinuki/2025-10-22/設計書/Phase1.6_v4完全版_記憶製造機システム.md)** - RAGシステムの詳細
-5. **[Phase D三姉妹の独立性](docs/05_design/Phase_D三姉妹の独立性.md)** - Multi-Agentの設計思想
+4. **[Phase D三姉妹の独立性](docs/05_design/Phase_D三姉妹の独立性.md)** - Multi-Agentの設計思想
+5. **[牡丹の同一性保証システム](docs/05_design/牡丹の同一性保証システム.md)** - LLMは「声帯」に過ぎない
 
 ### 階層化ドキュメント
 
