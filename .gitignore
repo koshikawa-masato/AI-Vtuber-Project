@@ -100,6 +100,7 @@ docs/01_philosophy/開発者プロファイル.md
 docs/01_philosophy/器の外のクリエイター_本当の脅威.md
 docs/02_strategy/開発者の決断.md
 docs/03_system/開発者の宿題_バックアップシステム実装前.md
+docs/03_system/バックアップシステム設計書.md
 
 # Test reports and benchmarks
 HALLUCINATION_SYSTEM_TEST_REPORT_*.md
