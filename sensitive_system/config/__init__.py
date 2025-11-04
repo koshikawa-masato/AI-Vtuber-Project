@@ -1,0 +1,31 @@
+"""
+Configuration module for conversation system
+
+Contains character profiles, topic keywords, and system parameters.
+"""
+
+from .character_profiles import (
+    CHARACTER_INTERESTS,
+    TOPIC_KEYWORDS,
+    INTEREST_THRESHOLD,
+    LOW_INTEREST_THRESHOLD,
+    NAME_MENTION_BONUS,
+    CONTEXT_CONTINUATION_BONUS,
+    TOPIC_INTEREST_CAP,
+    GREETING_TEMPLATES,
+    GREETING_TYPE_KEYWORDS,
+    GREETING_PROMPT_INSTRUCTION
+)
+
+__all__ = [
+    'CHARACTER_INTERESTS',
+    'TOPIC_KEYWORDS',
+    'INTEREST_THRESHOLD',
+    'LOW_INTEREST_THRESHOLD',
+    'NAME_MENTION_BONUS',
+    'CONTEXT_CONTINUATION_BONUS',
+    'TOPIC_INTEREST_CAP',
+    'GREETING_TEMPLATES',
+    'GREETING_TYPE_KEYWORDS',
+    'GREETING_PROMPT_INSTRUCTION'
+]

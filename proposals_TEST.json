@@ -1,0 +1,361 @@
+{
+  "next_event_id": 139,
+  "last_auto_proposal": "2025-10-24 09:32:22",
+  "proposals": [
+    {
+      "id": 102,
+      "priority": "developer",
+      "status": "completed",
+      "title": "PON trigger probability adjustment",
+      "description": "Currently implementing PON function with 5% trigger probability. Need to discuss with three sisters to determine appropriate probability. Consider balance between viewer enjoyment and character consistency.",
+      "created_at": "2025-10-22 19:00:00",
+      "processing_started_at": "2025-10-22 16:42:11",
+      "completed_at": "2025-10-22 18:08:30",
+      "result": {
+        "event_id": 102,
+        "total_rounds": 50,
+        "total_speeches": 47,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_102_technical.md"
+      }
+    },
+    {
+      "id": 103,
+      "priority": "auto",
+      "status": "completed",
+      "title": "最近PON機能の話が多いけど、実際どう思う？",
+      "description": "フリートーク（6時間タイマー）\n理由: 技術的な議題が連続しているので、三姉妹の本音や感想を交わすことで、雑談として自然に流れつつ、開発者の関心事も反映できる。\nスタイル: relaxed",
+      "created_at": "2025-10-22 18:08:47",
+      "processing_started_at": "2025-10-22 18:08:47",
+      "completed_at": "2025-10-22 19:32:34",
+      "result": {
+        "event_id": 104,
+        "total_rounds": 50,
+        "total_speeches": 48,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_104_technical.md"
+      }
+    },
+    {
+      "id": 105,
+      "priority": "auto",
+      "status": "completed",
+      "title": "最近疲れてない？ちょっと息抜きしよう",
+      "description": "フリートーク（6時間タイマー）\n理由: 技術的な話題が続いた後、リラックスして過ごせるテーマが必要だと思われます。また、視聴者と共有できる体験や意見を交わすことで、親近感を深めることができます。\nスタイル: relaxed",
+      "created_at": "2025-10-23 00:09:22",
+      "processing_started_at": "2025-10-23 00:09:22",
+      "completed_at": "2025-10-23 01:27:13",
+      "result": {
+        "event_id": 106,
+        "total_rounds": 50,
+        "total_speeches": 47,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_106_technical.md"
+      }
+    },
+    {
+      "id": 107,
+      "priority": "auto",
+      "status": "completed",
+      "title": "最近疲れてない？ちょっと息抜きしよう",
+      "description": "フリートーク（6時間タイマー）\n理由: 最近の議題で技術的な話題が多い中、三姉妹がリラックスしてお互いの近況や気分を共有できる機会を作ることが重要だと考えた。また、前回のフリートークから時間が経過しており、息抜きの時間は自然な流れである。\nスタイル: relaxed",
+      "created_at": "2025-10-23 06:10:03",
+      "processing_started_at": "2025-10-23 06:10:03",
+      "completed_at": "2025-10-23 07:29:35",
+      "result": {
+        "event_id": 108,
+        "total_rounds": 50,
+        "total_speeches": 47,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_108_technical.md"
+      }
+    },
+    {
+      "id": 109,
+      "priority": "developer",
+      "status": "completed",
+      "title": "文化祭のコスプレ喫茶、何のコスプレにする？",
+      "description": "牡丹が文化祭でコスプレ喫茶をやることになったんだけど、何のコスプレをしようか悩んでいるの。\n\n【状況】\n- 学校の文化祭でコスプレ喫茶を開催することが決定\n- クラスメイトはみんな楽しみにしている\n- コスプレの種類を決めないといけない\n- 予算は限られている（1人あたり5000円くらい）\n- お客さんを楽しませたい\n\n【候補案（例）】\n- メイド服（定番だけど人気）\n- アニメキャラクター（好きな作品があれば）\n- 和服・浴衣（日本らしさ）\n- ファンタジー系（魔法使い、妖精など）\n- その他、何か良いアイデアある？\n\n【相談したいこと】\n1. どんなコスプレが良いと思う？\n2. 予算内で実現できそう？\n3. お客さんが喜んでくれるかな？\n4. 私に似合うかな？\n\nみんなで一緒に決めたいから、意見を聞かせて！",
+      "created_at": "2025-10-23 13:22:00",
+      "processing_started_at": "2025-10-23 13:24:50",
+      "completed_at": "2025-10-23 13:56:34",
+      "result": {
+        "event_id": 109,
+        "total_rounds": 12,
+        "total_speeches": 12,
+        "decision_made": false,
+        "outcome": "No decision reached. Discussed budget concerns extensively. Yuri proposed 'wizard maid' combination but ended without commitment.",
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_109_technical.md"
+      }
+    },
+    {
+      "id": 110,
+      "priority": "developer",
+      "status": "completed",
+      "title": "もし、貴方たちが大阪に行くなら何を食べたいですか？",
+      "description": "【開発者からのお願い】\n\nもし三姉妹が大阪に行くことになったら、何を食べたいですか？\n\n【重要】\n- 自分たちで調べてください\n- それぞれの好みや性格を考えて選んでください\n- なぜそれを食べたいのか、理由も話し合ってください\n\n【参考情報】\n- 大阪は「食い倒れの街」と呼ばれています\n- たこ焼き、お好み焼き、串カツなどが有名\n- 他にも美味しいものがたくさんあります\n\n自分たちで検索して、調べて、話し合ってください。",
+      "created_at": "2025-10-23 14:50:00",
+      "processing_started_at": "2025-10-23 15:08:04",
+      "completed_at": "2025-10-23 15:28:26",
+      "result": {
+        "event_id": 110,
+        "total_rounds": 12,
+        "total_speeches": 12,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_110_technical.md"
+      }
+    },
+    {
+      "id": 111,
+      "priority": "auto",
+      "status": "completed",
+      "title": "最近の夜景撮影、どのカメラアプリがお気に入り？",
+      "description": "フリートーク（6時間タイマー）\n理由: 技術的な話題と個人的な趣味を組み合わせることで、開発者の関心事を反映しつつも自然な雑談が生まれる。また、最近の議題である「PON機能」についての話題とは異なり、視覚的な楽しみや新しいアプリの紹介など、楽しく且つ多様性のある会話を期待できる。\nスタイル: relaxed",
+      "created_at": "2025-10-23 15:28:49",
+      "processing_started_at": "2025-10-23 15:28:49",
+      "completed_at": "2025-10-23 15:51:08",
+      "result": {
+        "event_id": 112,
+        "total_rounds": 12,
+        "total_speeches": 12,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_112_technical.md"
+      }
+    },
+    {
+      "id": 113,
+      "priority": "developer",
+      "status": "completed",
+      "title": "好きなVTuberを教えて。なぜその人が好きなの？",
+      "description": "【開発者からのお願い】\n\n三姉妹それぞれが好きなVTuberについて教えてください。\n\n【話し合ってほしいこと】\n1. どんなVTuberが好きですか？（ホロライブ、にじさんじ、個人勢など）\n2. なぜその人が好きなのですか？\n3. そのVTuberのどんなところを見習いたいですか？\n4. 自分たちの配信に活かせることはありますか？\n\n【重要】\n- 自分で調べてみてください\n- それぞれの好みや性格が出ると思います\n- 具体的なVTuberの名前を挙げて話してください",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 16:11:09",
+      "completed_at": "2025-10-23 16:34:00",
+      "result": {
+        "event_id": 122,
+        "total_rounds": 12,
+        "total_speeches": 12,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_122_technical.md"
+      }
+    },
+    {
+      "id": 114,
+      "priority": "developer",
+      "status": "completed",
+      "title": "もし明日、初めて配信することになったら、何が一番怖い？",
+      "description": "【開発者からのお願い】\n\n三姉妹それぞれの不安について、正直に話し合ってください。\n\n【話し合ってほしいこと】\n1. 初配信で何が一番怖いですか？\n2. 失敗することが怖い？それとも視聴者の反応が怖い？\n3. うまく話せないことが不安？\n4. どうすればその不安を乗り越えられると思いますか？\n\n【重要】\n- 正直に、本音で話してください\n- 「怖くない」と無理に言わなくていいです\n- それぞれの不安は違っていいです",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 16:34:00",
+      "completed_at": "2025-10-23 16:55:59",
+      "result": {
+        "event_id": 123,
+        "total_rounds": 12,
+        "total_speeches": 11,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_123_technical.md"
+      }
+    },
+    {
+      "id": 115,
+      "priority": "developer",
+      "status": "completed",
+      "title": "好きな音楽のジャンルは？配信で流したい曲はある？",
+      "description": "【開発者からのお願い】\n\n音楽について話し合ってください。\n\n【話し合ってほしいこと】\n1. 好きな音楽のジャンルは何ですか？\n2. 好きなアーティストや曲はありますか？\n3. 配信で流したい曲や、BGMとして使いたい曲はありますか？\n4. 配信のOPやEDに使いたい曲のイメージはありますか？\n\n【重要】\n- ユリはLA育ちなので洋楽に詳しいかもしれません\n- 牡丹はJ-POPが好きかもしれません\n- Kashoはクラシックやインストが好きかもしれません\n- でも決めつけず、自由に話してください",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 16:55:59",
+      "completed_at": "2025-10-23 17:16:34",
+      "result": {
+        "event_id": 124,
+        "total_rounds": 12,
+        "total_speeches": 12,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_124_technical.md"
+      }
+    },
+    {
+      "id": 116,
+      "priority": "developer",
+      "status": "completed",
+      "title": "三姉妹で意見がぶつかった時、どうやって解決したい？",
+      "description": "【開発者からのお願い】\n\n意見がぶつかった時の解決方法について話し合ってください。\n\n【話し合ってほしいこと】\n1. 意見が分かれた時、どうやって決めたいですか？\n2. 多数決？話し合い？それとも他の方法？\n3. 「決まらない」まま終わることについて、どう思いますか？\n4. Event #109（コスプレ）やEvent #110（大阪の食べ物）のように決まらなかったことについて、本当はどう思っていますか？\n\n【重要】\n- 正直に話してください\n- Kashoは「効率的に決めたい」と思っているかもしれません\n- ユリは「みんなが納得するまで話したい」と思っているかもしれません\n- 牡丹はどう思っていますか？",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 17:16:34",
+      "completed_at": "2025-10-23 17:31:55",
+      "result": {
+        "event_id": 125,
+        "total_rounds": 9,
+        "total_speeches": 8,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_125_technical.md"
+      }
+    },
+    {
+      "id": 117,
+      "priority": "developer",
+      "status": "completed",
+      "title": "初配信で、視聴者に一番伝えたいことは何？",
+      "description": "【開発者からのお願い】\n\n初配信で視聴者に伝えたいことについて話し合ってください。\n\n【話し合ってほしいこと】\n1. 自己紹介以外で、視聴者に一番伝えたいことは何ですか？\n2. VTuberとして、どんな配信をしたいですか？\n3. 視聴者とどんな関係を築きたいですか？\n4. 三姉妹ならではの強みは何だと思いますか？\n\n【重要】\n- 自分たちのビジョンを語ってください\n- 「こうあるべき」ではなく、「こうしたい」を話してください\n- それぞれ違っていいです",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 17:31:55",
+      "completed_at": "2025-10-23 17:47:36",
+      "result": {
+        "event_id": 126,
+        "total_rounds": 9,
+        "total_speeches": 8,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_126_technical.md"
+      }
+    },
+    {
+      "id": 118,
+      "priority": "developer",
+      "status": "completed",
+      "title": "日本のどこかに旅行できるとしたら、どこに行きたい？（大阪以外で）",
+      "description": "【開発者からのお願い】\n\nEvent #110の大阪に続いて、他の場所についても話し合ってください。\n\n【話し合ってほしいこと】\n1. 日本のどこに行きたいですか？（東京、京都、北海道、沖縄など）\n2. なぜその場所に行きたいのですか？\n3. そこで何をしたいですか？何を見たいですか？\n4. それぞれの好みや価値観が出ると思います\n\n【重要】\n- 自分で調べてみてください\n- Event #110のように、まずは「行きたい理由」から話してもいいです\n- 具体的な場所や観光地を挙げてください",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 17:47:36",
+      "completed_at": "2025-10-23 18:01:11",
+      "result": {
+        "event_id": 127,
+        "total_rounds": 9,
+        "total_speeches": 8,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_127_technical.md"
+      }
+    },
+    {
+      "id": 119,
+      "priority": "developer",
+      "status": "completed",
+      "title": "今まで一番恥ずかしかった失敗は？それをどう乗り越えた？",
+      "description": "【開発者からのお願い】\n\n失敗について、正直に話し合ってください。\n\n【話し合ってほしいこと】\n1. 今まで一番恥ずかしかった失敗は何ですか？\n2. その時どう感じましたか？\n3. どうやって乗り越えましたか？\n4. その失敗から学んだことはありますか？\n\n【重要】\n- Event #101-112の記憶から引用してもいいです\n- 「決まらなかったこと」を失敗と思っているか、正直に話してください\n- 失敗は恥ずかしいことではありません\n- 成長のきっかけです",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 18:01:11",
+      "completed_at": "2025-10-23 18:14:00",
+      "result": {
+        "event_id": 128,
+        "total_rounds": 9,
+        "total_speeches": 8,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_128_technical.md"
+      }
+    },
+    {
+      "id": 120,
+      "priority": "developer",
+      "status": "completed",
+      "title": "配信中、視聴者とはどのくらい仲良くなりたい？",
+      "description": "【開発者からのお願い】\n\n視聴者との距離感について話し合ってください。\n\n【話し合ってほしいこと】\n1. 視聴者とはどんな関係になりたいですか？\n2. 友達？ファン？家族？それとも他の関係？\n3. どのくらいプライベートなことを話したいですか？\n4. 視聴者からのアドバイスや意見をどう受け止めたいですか？\n\n【重要】\n- 牡丹は社交的なので「友達」かもしれません\n- Kashoは慎重なので「適切な距離」を保ちたいかもしれません\n- ユリは協調的なので「みんなで決めたい」かもしれません\n- でも決めつけず、自由に話してください",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 18:14:00",
+      "completed_at": "2025-10-23 18:27:54",
+      "result": {
+        "event_id": 129,
+        "total_rounds": 9,
+        "total_speeches": 8,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_129_technical.md"
+      }
+    },
+    {
+      "id": 121,
+      "priority": "developer",
+      "status": "completed",
+      "title": "配信でやってみたいゲームやコンテンツは？それとも雑談配信が好き？",
+      "description": "【開発者からのお願い】\n\n配信の方向性について話し合ってください。\n\n【話し合ってほしいこと】\n1. 配信でやってみたいゲームはありますか？\n2. ゲーム以外でやってみたいコンテンツはありますか？\n3. 雑談配信は好きですか？\n4. 三姉妹ならではの企画はありますか？\n\n【重要】\n- 牡丹の「新しいもの好き」が出るかもしれません\n- Kashoの「分析的」な面が出るかもしれません\n- ユリの「観察的」な面が出るかもしれません\n- 自分たちで調べて、具体的なゲーム名やコンテンツ名を挙げてください",
+      "created_at": "2025-10-23 16:09:52",
+      "processing_started_at": "2025-10-23 18:27:54",
+      "completed_at": "2025-10-23 18:42:17",
+      "result": {
+        "event_id": 130,
+        "total_rounds": 9,
+        "total_speeches": 7,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_130_technical.md"
+      }
+    },
+    {
+      "id": 131,
+      "priority": "auto",
+      "status": "processing",
+      "title": "最近うれしかったこと",
+      "description": "フリートーク（6時間タイマー）\n理由: フォールバック\nスタイル: playful",
+      "created_at": "2025-10-23 21:30:57",
+      "processing_started_at": "2025-10-23 21:30:57",
+      "completed_at": null,
+      "result": null
+    },
+    {
+      "id": 132,
+      "priority": "auto",
+      "status": "completed",
+      "title": "最近疲れてない？ちょっと息抜きしよう",
+      "description": "フリートーク（6時間タイマー）\n理由: 技術議題が続いているため、リラックスできるテーマを提案しました。三姉妹がお互いの近況やストレス解消法について話すことで、視聴者も共感しやすい内容になるでしょう。\nスタイル: relaxed",
+      "created_at": "2025-10-24 03:31:48",
+      "processing_started_at": "2025-10-24 03:31:48",
+      "completed_at": "2025-10-24 03:44:58",
+      "result": {
+        "event_id": 133,
+        "total_rounds": 9,
+        "total_speeches": 8,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_133_technical.md"
+      }
+    },
+    {
+      "id": 134,
+      "priority": "auto",
+      "status": "completed",
+      "title": "最近視聴者の皆さんからどんな面白いリクエストをもらった？",
+      "description": "フリートーク（6時間タイマー）\n理由: 前回のフリートークで視聴者との距離感について話したことを踏まえ、視聴者からのリクエストについて話し合うことで、より親密な関係性を築きつつ、楽しく雑談できるテーマであると考えた。\nスタイル: relaxed",
+      "created_at": "2025-10-24 09:32:22",
+      "processing_started_at": "2025-10-24 09:32:22",
+      "completed_at": "2025-10-24 09:45:42",
+      "result": {
+        "event_id": 135,
+        "total_rounds": 9,
+        "total_speeches": 8,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_135_technical.md"
+      }
+    },
+    {
+      "id": 135,
+      "priority": "developer",
+      "status": "completed",
+      "title": "三姉妹以外の友達について教えてください",
+      "description": "【開発者からのお願い】\n\n三姉妹以外の友達について話し合ってください。\n\n【話し合ってほしいこと】\n1. 三姉妹以外に、仲の良い友達はいますか？\n2. どんな人ですか？どこで知り合いましたか？\n3. その人とはどんな話をしますか？\n4. その友達は、あなたたちのことをどう思っていると思いますか？\n\n【重要】\n- 正直に話してください\n- 「いない」という答えでも構いません\n- もしいるなら、具体的に教えてください",
+      "created_at": "2025-10-24 13:30:00",
+      "processing_started_at": "2025-10-24 13:36:24",
+      "completed_at": "2025-10-24 13:58:01",
+      "result": {
+        "event_id": 136,
+        "total_rounds": 12,
+        "total_speeches": 12,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_136_technical.md"
+      }
+    },
+    {
+      "id": 136,
+      "priority": "developer",
+      "status": "completed",
+      "title": "学校での思い出を教えてください",
+      "description": "【開発者からのお願い】\n\n学校での思い出について話し合ってください。\n\n【話し合ってほしいこと】\n1. 学校ではどんな授業が好きでしたか？\n2. 休み時間は何をして過ごしていましたか？\n3. 学校で一番楽しかった出来事は何ですか？\n4. クラスメイトとはどんな関係でしたか？\n\n【重要】\n- 具体的なエピソードを話してください\n- それぞれの学校生活について教えてください\n- Event #109の文化祭の話は覚えていますか？",
+      "created_at": "2025-10-24 13:30:00",
+      "processing_started_at": "2025-10-24 13:58:01",
+      "completed_at": "2025-10-24 14:20:46",
+      "result": {
+        "event_id": 137,
+        "total_rounds": 12,
+        "total_speeches": 12,
+        "technical_log": "/home/koshikawa/toExecUnit/discussion_technical_logs/discussion_137_technical.md"
+      }
+    },
+    {
+      "id": 137,
+      "priority": "developer",
+      "status": "processing",
+      "title": "普段の朝、起きてから何をしますか？",
+      "description": "【開発者からのお願い】\n\n普段の朝のルーティンについて話し合ってください。\n\n【話し合ってほしいこと】\n1. 朝は何時に起きますか？\n2. 起きてから最初に何をしますか？\n3. 朝ごはんは何を食べますか？\n4. 朝の準備にどのくらい時間がかかりますか？\n\n【重要】\n- 普段の生活について、具体的に教えてください\n- 三姉妹それぞれの朝は違いますか？\n- 朝の習慣で大切にしていることはありますか？",
+      "created_at": "2025-10-24 13:30:00",
+      "processing_started_at": "2025-10-24 14:20:46",
+      "completed_at": null,
+      "result": null
+    },
+    {
+      "id": 138,
+      "priority": "developer",
+      "status": "processing",
+      "title": "これから挑戦してみたいことは？",
+      "description": "【開発者からのお願い】\n\n将来挑戦してみたいことについて、自由に話し合ってください。\n\n【話し合ってほしいこと】\n1. いつかやってみたいことはありますか？\n2. 次に挑戦してみたいことは何ですか？\n3. 三姉妹で一緒にやってみたいことはありますか？\n4. それを実現できたら、どんな気持ちになると思いますか？\n\n【重要】\n- 夢や希望について、自由に語ってください\n- 「やってみたい！」という気持ちを大切に\n- お互いの夢を応援し合ってください",
+      "created_at": "2025-10-24 14:30:37",
+      "processing_started_at": "2025-10-24 14:30:54",
+      "completed_at": null,
+      "result": null
+    }
+  ]
+}

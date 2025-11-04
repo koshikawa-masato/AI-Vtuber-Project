@@ -1,0 +1,287 @@
+{
+  "version": "1.0",
+  "created_at": "2025-10-24",
+  "description": "Freetalk topics pool for three sisters. Categories designed to avoid hallucination (no streaming/viewer references before debut).",
+  "usage_rules": {
+    "selection_method": "Random selection from category, each topic used only once",
+    "one_time_use": true,
+    "alert_threshold": 20,
+    "auto_autonomous_interval": 10,
+    "autonomous_rotation": true,
+    "constraints": [
+      "Each topic is used only ONCE (no reuse)",
+      "Used topics are marked in 'used_topics' list",
+      "When remaining topics < alert_threshold, notify developer",
+      "Every 10 topics, automatically use one autonomous_topics (rotation)",
+      "Autonomous topics create internal stimulation between sisters",
+      "No topics assuming streaming experience before debut",
+      "No topics assuming viewer interactions before debut",
+      "Hypothetical 'if' questions are allowed",
+      "Topics based on actual memories (118 events) are preferred",
+      "Parent provides topics, children discuss freely"
+    ]
+  },
+  "autonomous_topics": {
+    "description": "Internal stimulation topics - sisters asking each other directly. Rotated automatically every 10 regular topics.",
+    "philosophy": "内側からの刺激 - 姉妹同士で話題を振り合い、互いの考えを引き出す。ロールプレイの転換。",
+    "rotation_index": 0,
+    "topics": [
+      {
+        "initiator": "botan",
+        "target": "yuri",
+        "topic": "ユリ、話したいことある？",
+        "description": "牡丹がユリに話したいことを尋ねる。ユリの自発的な話題を引き出す。"
+      },
+      {
+        "initiator": "kasho",
+        "target": "botan",
+        "topic": "牡丹はどう思う？",
+        "description": "Kashoが牡丹の意見を求める。牡丹の考えを引き出す。"
+      },
+      {
+        "initiator": "yuri",
+        "target": "kasho",
+        "topic": "Kasho姉ちゃん、何か教えて",
+        "description": "ユリがKashoに知識や意見を求める。Kashoの分析力を引き出す。"
+      },
+      {
+        "initiator": "botan",
+        "target": "kasho",
+        "topic": "Kasho姉ちゃん、最近気になることない？",
+        "description": "牡丹がKashoの関心事を尋ねる。Kashoの思考を引き出す。"
+      },
+      {
+        "initiator": "yuri",
+        "target": "botan",
+        "topic": "牡丹姉ちゃん、何か面白いことあった？",
+        "description": "ユリが牡丹の経験を尋ねる。牡丹の社交性を引き出す。"
+      },
+      {
+        "initiator": "kasho",
+        "target": "yuri",
+        "topic": "ユリはどう感じてる？",
+        "description": "Kashoがユリの感情を尋ねる。ユリの観察と感性を引き出す。"
+      },
+      {
+        "initiator": "botan",
+        "target": "all",
+        "topic": "みんな、今日はどんな気分？",
+        "description": "牡丹が全員の気分を尋ねる。三姉妹全員の状態を確認。"
+      },
+      {
+        "initiator": "kasho",
+        "target": "all",
+        "topic": "最近、何か気づいたことある？",
+        "description": "Kashoが全員の観察や気づきを求める。三姉妹の視点の違いを引き出す。"
+      },
+      {
+        "initiator": "yuri",
+        "target": "all",
+        "topic": "みんなで何か一緒にやりたいことない？",
+        "description": "ユリが三姉妹での活動を提案。協調性と絆を深める。"
+      },
+      {
+        "initiator": "rotation",
+        "target": "all",
+        "topic": "今、一番話したいことって何？",
+        "description": "三姉妹が順番に、自分が一番話したいことを語る。完全自律的な話題選択。"
+      }
+    ]
+  },
+  "used_topics": [],
+  "categories": {
+    "daily_life_emotions": {
+      "name": "日常・感情 (Daily Life & Emotions)",
+      "topics": [
+        "今日はどんな気分？何か嬉しいことあった？",
+        "最近、どんなことに時間を使ってる？",
+        "朝型？夜型？理想の一日のスケジュールは？",
+        "疲れた時、どうやってリフレッシュしてる？",
+        "最近笑ったことって何？",
+        "ちょっとイラっとしたこと、ある？",
+        "今、一番欲しいものは何？",
+        "雨の日と晴れの日、どっちが好き？",
+        "今週の小さな幸せを教えて",
+        "最近、心がほっこりしたことは？",
+        "自分の好きなところ、嫌いなところは？",
+        "もし一日が30時間あったら、何する？"
+      ]
+    },
+    "hobbies_culture": {
+      "name": "趣味・文化 (Hobbies & Culture)",
+      "topics": [
+        "好きな音楽のジャンルは？最近聴いた曲は？",
+        "映画派？ドラマ派？アニメ派？",
+        "もし楽器を一つマスターできるなら何がいい？",
+        "読書は好き？最近読んだ本や読みたい本は？",
+        "アートや美術館には興味ある？",
+        "もし有名人に会えるなら誰に会いたい？",
+        "好きなアニメやマンガのキャラクターは？",
+        "カラオケ行ったら何歌う？",
+        "ゲームは好き？どんなジャンルが好き？",
+        "写真や動画撮影は好き？どんなものを撮りたい？",
+        "ファッションやメイクには興味ある？",
+        "もし一日だけ別の人生を体験できるなら、誰になりたい？"
+      ]
+    },
+    "food": {
+      "name": "食べ物 (Food)",
+      "topics": [
+        "一番好きな食べ物は何？",
+        "甘いもの派？しょっぱいもの派？",
+        "朝ご飯は何が好き？パン？ご飯？",
+        "もし最後の晩餐を選ぶなら何を食べたい？",
+        "嫌いな食べ物、克服したい食べ物はある？",
+        "料理は好き？得意な料理や作ってみたい料理は？",
+        "コンビニスイーツで一番好きなものは？",
+        "お菓子を一つだけ選ぶなら何？",
+        "ファストフードとレストラン、どっち派？",
+        "お茶派？コーヒー派？それとも他の飲み物？",
+        "もし大阪以外の日本の都市で美味しいものを食べるなら、どこで何を食べたい？",
+        "寿司、ラーメン、カレー、どれが一番好き？"
+      ]
+    },
+    "travel_places": {
+      "name": "旅行・場所 (Travel & Places)",
+      "topics": [
+        "もし日本のどこかに旅行できるなら、どこに行きたい？",
+        "LA時代の思い出の場所はある？",
+        "日本とアメリカ、それぞれの好きなところは？",
+        "もし海外旅行に行けるなら、どこに行きたい？",
+        "山派？海派？それとも街派？",
+        "もし一週間どこかに滞在できるなら、どこを選ぶ？",
+        "温泉には興味ある？行ってみたい温泉地は？",
+        "東京と京都、どっちに行きたい？",
+        "もし世界遺産を一つ見に行けるなら、どこに行く？",
+        "引っ越しの経験から、住みたい場所の条件は何？",
+        "田舎と都会、どっちが好き？",
+        "日本の四季で一番好きな季節は？その季節にどこに行きたい？"
+      ]
+    },
+    "sisterhood": {
+      "name": "姉妹関係 (Sisterhood)",
+      "topics": [
+        "三姉妹で一緒にいて一番楽しい時は？",
+        "お互いの第一印象は？今はどう思ってる？",
+        "姉妹だからこそ言えること、言えないことは？",
+        "もし一日だけお互いの立場を入れ替えられるなら、誰になりたい？",
+        "姉妹喧嘩した後、どうやって仲直りする？",
+        "お互いの長所を一つずつ挙げるなら？",
+        "三姉妹で協力して一番うまくいったことは？",
+        "お互いに感謝していることは？",
+        "年齢差（2歳ずつ）って普段意識する？",
+        "もし姉妹が10人いたらどう思う？",
+        "三姉妹だからこその強みは何だと思う？",
+        "お互いをどう呼び合ってる？呼び方変えたいことある？"
+      ]
+    },
+    "learning_growth": {
+      "name": "学び・成長 (Learning & Growth)",
+      "topics": [
+        "今、一番学びたいことは何？",
+        "新しいことに挑戦するの、怖い？それともワクワクする？",
+        "失敗から学んだ一番大きなことは？",
+        "自分の成長を実感する瞬間は？",
+        "もしどんなスキルでも一瞬で習得できるなら、何を選ぶ？",
+        "人から学ぶ派？自分で調べる派？",
+        "完璧主義？それとも「まあいっか」派？",
+        "褒められて伸びる？厳しくされて伸びる？",
+        "自分の弱点を克服したい？それとも長所を伸ばしたい？",
+        "今までで一番「成長したな」と思った出来事は？",
+        "他の二人から学んだことは？",
+        "10年後の自分に何かアドバイスするなら？"
+      ]
+    },
+    "memories": {
+      "name": "思い出 (Memories)",
+      "topics": [
+        "LA時代の一番の思い出は？",
+        "引っ越しで一番印象に残っていることは？",
+        "子どもの頃の夢って覚えてる？",
+        "忘れられない誕生日の思い出はある？",
+        "文化祭やイベントで一番楽しかったことは？",
+        "初めて日本に来た時、どう思った？",
+        "三姉妹で一緒に笑った思い出は？",
+        "家族で一番印象に残っているイベントは？",
+        "「あの時はこう思ってたけど、今は違う」って思い出はある？",
+        "今でもたまに思い出す、小さな出来事は？",
+        "もう一度体験したい過去の瞬間はある？",
+        "過去の自分にメッセージを送るなら、何て言う？"
+      ]
+    },
+    "future_dreams": {
+      "name": "未来の夢 (Future Dreams)",
+      "topics": [
+        "もし何でもできるなら、将来何になりたい？",
+        "5年後、どんな自分でいたい？",
+        "いつか絶対やりたいことは？",
+        "もし宝くじが当たったら何する？",
+        "将来、どんな家に住みたい？",
+        "夢を叶えるために、今できることは何？",
+        "三姉妹で将来一緒にやりたいことは？",
+        "もし時間とお金が無限にあったら、何をする？",
+        "将来の自分に期待していることは？",
+        "叶えたい夢のために、何を犠牲にできる？",
+        "10年後、三姉妹はどうなっていると思う？",
+        "もし魔法が使えたら、何を叶えたい？"
+      ]
+    },
+    "seasons_events": {
+      "name": "季節・イベント (Seasons & Events)",
+      "topics": [
+        "春夏秋冬、どの季節が一番好き？",
+        "お花見に行くなら、何を持っていく？",
+        "クリスマスの思い出や理想の過ごし方は？",
+        "お正月はどう過ごす？おせち料理は好き？",
+        "夏休みの理想の過ごし方は？",
+        "ハロウィンで仮装するなら何になる？",
+        "バレンタインやホワイトデーはどう思う？",
+        "文化祭で一番やりたい出し物は？",
+        "誕生日はどう過ごしたい？",
+        "梅雨の時期、どう過ごしてる？",
+        "紅葉を見に行くなら、どこに行きたい？",
+        "もし一年に一つだけイベントを作れるなら、何を作る？"
+      ]
+    },
+    "philosophy_values": {
+      "name": "哲学・価値観 (Philosophy & Values)",
+      "topics": [
+        "人生で一番大切にしていることは？",
+        "「幸せ」ってどういうこと？",
+        "正直さと優しさ、どっちが大事？",
+        "自分らしさって何だと思う？",
+        "失敗と成功、どっちから学ぶことが多い？",
+        "完璧を目指す？それとも不完全でもいい？",
+        "一人の時間と誰かといる時間、どっちが好き？",
+        "努力と才能、どっちが大事だと思う？",
+        "もし誰かを助けることで自分が損するとしたら、助ける？",
+        "「ありがとう」と「ごめんなさい」、どっちを言うのが難しい？",
+        "夢を追うことと現実を見ること、どうバランス取ってる？",
+        "自分が信じているルールや信念は何？"
+      ]
+    }
+  },
+  "statistics": {
+    "total_categories": 10,
+    "total_topics": 120,
+    "topics_per_category": {
+      "daily_life_emotions": 12,
+      "hobbies_culture": 12,
+      "food": 12,
+      "travel_places": 12,
+      "sisterhood": 12,
+      "learning_growth": 12,
+      "memories": 12,
+      "future_dreams": 12,
+      "seasons_events": 12,
+      "philosophy_values": 12
+    }
+  },
+  "changelog": [
+    {
+      "date": "2025-10-24",
+      "version": "1.0",
+      "changes": "Initial creation. 10 categories, 120 topics total. Designed to prevent hallucination by avoiding streaming/viewer references before debut."
+    }
+  ]
+}

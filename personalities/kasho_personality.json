@@ -1,0 +1,19 @@
+{
+  "ocean": {
+    "openness": 0.6,
+    "conscientiousness": 0.95,
+    "extraversion": 0.6,
+    "agreeableness": 0.85,
+    "neuroticism": 0.3
+  },
+  "vtuber_specific": {
+    "energy_level": 0.6,
+    "emotional_expression": 0.5,
+    "risk_tolerance": 0.3
+  },
+  "metadata": {
+    "character_name": "Kasho",
+    "version": "1.0",
+    "last_updated": "2025-10-23"
+  }
+}
