@@ -28,7 +28,7 @@ from personality_core import PersonalityCore, BotanPersonality, KashoPersonality
 
 # LangChain imports (only loaded if use_langchain=True)
 try:
-    from langchain_community.vectorstores import Chroma
+    from langchain_chroma import Chroma
     from langchain_ollama import OllamaEmbeddings
     from langchain_core.documents import Document
     LANGCHAIN_AVAILABLE = True
@@ -171,9 +171,9 @@ class MemoryRetrievalLogicDual:
         """Initialize LangChain VectorStore"""
         print("[LangChain] Initializing ChromaDB VectorStore...")
 
-        # Use Ollama for embeddings (qwen2.5:32b - same as main system)
+        # Use Ollama for embeddings (qwen2.5:14b - heavyweight for benchmark testing)
         self.embeddings = OllamaEmbeddings(
-            model="qwen2.5:32b",
+            model="qwen2.5:14b",
             base_url="http://localhost:11434"
         )
 
