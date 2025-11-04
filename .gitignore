@@ -28,7 +28,7 @@ data/*.db
 # Backup and archive directories
 backup/
 backups/
-archived/
+archived/phase1.5_frozen_*/
 COPY_ROBOT_*.db
 *_BEFORE_RESTORE.db
 
@@ -98,6 +98,8 @@ CLAUDE.md.backup_*
 HALLUCINATION_SYSTEM_TEST_REPORT_*.md
 HALLUCINATION_SYSTEM_CRITICAL_ISSUE_*.md
 BENCHMARK_SUMMARY.md
+benchmark_results_*.json
+benchmark_results_*_responses.txt
 
 # Old implementation plans
 OPTION_A_IMPLEMENTATION_PLAN.md
