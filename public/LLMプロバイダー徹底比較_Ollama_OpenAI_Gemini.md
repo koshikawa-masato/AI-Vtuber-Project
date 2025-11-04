@@ -3,12 +3,12 @@ title: Ollama vs OpenAI vs Gemini：AI VTuber向けLLMプロバイダー徹底�
 tags:
   - Python
   - AI
-  - LLM
-  - Ollama
   - Gemini
+  - LLM
+  - ollama
 private: false
-updated_at: '2025-11-04'
-id: null
+updated_at: '2025-11-04T16:53:38+09:00'
+id: 21bb4a7cc131ef7145d4
 organization_url_name: null
 slide: false
 ignorePublish: false
@@ -633,7 +633,5 @@ AI VTuberプロジェクトでは、**ハイブリッド構成**が最適：
 
 **koshikawa-masato**
 - AI VTuberプロジェクト開発者
-- 50年のエンジニア経験（パソコン通信時代から）
-- 完全ローカルAI VTuberシステムの先駆者
 
 この記事が参考になったら、ぜひ **LGTM** をお願いします！🙏
