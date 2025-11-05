@@ -70,7 +70,8 @@ class TracedLLM:
         self,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int = 1024
+        max_tokens: int = 1024,
+        image_url: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Call Ollama API with tracing
@@ -79,11 +80,23 @@ class TracedLLM:
             prompt: Input prompt
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
+            image_url: Image URL (not supported by Ollama)
 
         Returns:
             Response dict with 'response', 'tokens', 'latency_ms'
         """
         start_time = time.time()
+
+        # Ollama doesn't support vision
+        if image_url:
+            return {
+                "response": "",
+                "tokens": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                "latency_ms": 0,
+                "model": self.model,
+                "provider": self.provider,
+                "error": "Ollama does not support vision/image input"
+            }
 
         try:
             with httpx.Client(timeout=120.0) as client:
@@ -131,18 +144,29 @@ class TracedLLM:
         self,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int = 1024
+        max_tokens: int = 1024,
+        image_url: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Call OpenAI API with tracing"""
+        """Call OpenAI API with tracing (supports Vision)"""
         try:
             import openai
 
             start_time = time.time()
 
             client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
+
+            # Build message content (text + optional image)
+            if image_url:
+                content = [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": image_url}}
+                ]
+            else:
+                content = prompt
+
             response = client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": content}],
                 temperature=temperature,
                 max_tokens=max_tokens
             )
@@ -176,13 +200,17 @@ class TracedLLM:
         self,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int = 1024
+        max_tokens: int = 1024,
+        image_url: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Call Google Gemini API with tracing"""
+        """Call Google Gemini API with tracing (supports Vision)"""
         start_time = time.time()
 
         try:
             import google.generativeai as genai
+            from PIL import Image
+            import requests
+            from io import BytesIO
 
             genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
@@ -211,8 +239,26 @@ class TracedLLM:
                 safety_settings=safety_settings
             )
 
+            # Prepare content (text + optional image)
+            if image_url:
+                # Download or load image
+                if image_url.startswith('http'):
+                    # Gemini can accept image URLs directly
+                    import PIL.Image
+                    response_img = requests.get(image_url, stream=True)
+                    response_img.raise_for_status()
+                    img = PIL.Image.open(response_img.raw)
+                else:
+                    # Local file path
+                    import PIL.Image
+                    img = PIL.Image.open(image_url)
+
+                content = [prompt, img]
+            else:
+                content = prompt
+
             response = model.generate_content(
-                prompt,
+                content,
                 generation_config=genai.types.GenerationConfig(
                     temperature=temperature,
                     max_output_tokens=max_tokens
@@ -315,7 +361,8 @@ class TracedLLM:
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 1024,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        image_url: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate text with LLM (with automatic tracing)
@@ -325,6 +372,7 @@ class TracedLLM:
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
             metadata: Additional metadata for tracing (e.g., character, topic)
+            image_url: Optional image URL or file path (for Vision models)
 
         Returns:
             Response dict with 'response', 'tokens', 'latency_ms'
@@ -336,11 +384,11 @@ class TracedLLM:
         def do_generate(input_prompt: str) -> str:
             """Generate response and return just the text for clean LangSmith display"""
             if self.provider == "ollama":
-                full_result = self._ollama_generate(input_prompt, temperature, max_tokens)
+                full_result = self._ollama_generate(input_prompt, temperature, max_tokens, image_url)
             elif self.provider == "openai":
-                full_result = self._openai_generate(input_prompt, temperature, max_tokens)
+                full_result = self._openai_generate(input_prompt, temperature, max_tokens, image_url)
             elif self.provider == "gemini":
-                full_result = self._gemini_generate(input_prompt, temperature, max_tokens)
+                full_result = self._gemini_generate(input_prompt, temperature, max_tokens, image_url)
             else:
                 raise ValueError(f"Unknown provider: {self.provider}")
 
