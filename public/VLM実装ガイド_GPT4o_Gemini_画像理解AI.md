@@ -7,7 +7,7 @@ tags:
   - GPT-4
   - vlm
 private: false
-updated_at: '2025-11-05T10:59:56+09:00'
+updated_at: '2025-11-05T11:01:49+09:00'
 id: fd684b963bad149d3ddc
 organization_url_name: null
 slide: false
@@ -16,13 +16,13 @@ ignorePublish: false
 
 # はじめに
 
-テキスト生成だけでなく、**画像を理解して説明できるAI**を実装したい。そんなニーズに応えるのが**VLM（Vision Language Model）**です。
+テキスト生成だけでなく、**画像を理解して説明できるAI**を実装したい。そんなニーズに応えるのが**VLM (Vision Language Model)** です。
 
 本記事では、GPT-4oとGeminiを使ってVLM機能を実装し、LangSmithでトレーシングする方法を紹介します。
 
 ## 🎯 この記事で分かること
 
-- VLM（Vision Language Model）とは何か
+- VLM (Vision Language Model) とは何か
 - GPT-4o Visionの統合方法
 - Gemini Visionの統合方法（エラー対処含む）
 - LangSmithでVLM呼び出しをトレーシング
@@ -35,9 +35,9 @@ ignorePublish: false
 
 ---
 
-# VLM（Vision Language Model）とは
+# VLM (Vision Language Model) とは
 
-**VLM（Vision Language Model）**は、テキストと画像を同時に理解できるAIモデルです。
+**VLM (Vision Language Model)** は、テキストと画像を同時に理解できるAIモデルです。
 
 ## 従来のLLM vs VLM
 
@@ -650,7 +650,7 @@ print(f"抽出されたテキスト:\n{result['response']}")
 
 # おわりに
 
-VLM（Vision Language Model）を実装することで、テキストだけでなく画像も理解できるAIシステムを構築できました。
+VLM (Vision Language Model) を実装することで、テキストだけでなく画像も理解できるAIシステムを構築できました。
 
 特に以下の点が重要でした：
 
