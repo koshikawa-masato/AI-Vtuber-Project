@@ -193,13 +193,37 @@ class TracedLLM:
         max_tokens: int = 1024
     ) -> Dict[str, Any]:
         """Call Google Gemini API with tracing"""
+        start_time = time.time()
+
         try:
             import google.generativeai as genai
 
-            start_time = time.time()
-
             genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            model = genai.GenerativeModel(self.model)
+
+            # Configure safety settings to be more permissive
+            safety_settings = [
+                {
+                    "category": "HARM_CATEGORY_HARASSMENT",
+                    "threshold": "BLOCK_NONE",
+                },
+                {
+                    "category": "HARM_CATEGORY_HATE_SPEECH",
+                    "threshold": "BLOCK_NONE",
+                },
+                {
+                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    "threshold": "BLOCK_NONE",
+                },
+                {
+                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    "threshold": "BLOCK_NONE",
+                },
+            ]
+
+            model = genai.GenerativeModel(
+                self.model,
+                safety_settings=safety_settings
+            )
 
             response = model.generate_content(
                 prompt,
@@ -211,13 +235,76 @@ class TracedLLM:
 
             latency_ms = (time.time() - start_time) * 1000
 
-            return {
-                "response": response.text,
-                "tokens": {
+            # Check if response was blocked
+            if not response.candidates:
+                error_msg = "Response blocked: No candidates returned"
+                return {
+                    "response": "",
+                    "tokens": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                    "latency_ms": latency_ms,
+                    "model": self.model,
+                    "provider": self.provider,
+                    "error": error_msg
+                }
+
+            candidate = response.candidates[0]
+
+            # Check finish_reason
+            finish_reason = candidate.finish_reason
+            if finish_reason != 1:  # 1 = STOP (normal completion)
+                finish_reason_names = {
+                    0: "FINISH_REASON_UNSPECIFIED",
+                    1: "STOP",
+                    2: "MAX_TOKENS",
+                    3: "SAFETY",
+                    4: "RECITATION",
+                    5: "OTHER"
+                }
+                reason_name = finish_reason_names.get(finish_reason, f"UNKNOWN({finish_reason})")
+
+                if finish_reason == 3:  # SAFETY
+                    safety_info = []
+                    if hasattr(candidate, 'safety_ratings'):
+                        for rating in candidate.safety_ratings:
+                            if rating.probability != 1:  # Not NEGLIGIBLE
+                                safety_info.append(f"{rating.category.name}: {rating.probability}")
+
+                    error_msg = f"Blocked by safety filter: {reason_name}"
+                    if safety_info:
+                        error_msg += f" ({', '.join(safety_info)})"
+
+                    return {
+                        "response": "",
+                        "tokens": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                        "latency_ms": latency_ms,
+                        "model": self.model,
+                        "provider": self.provider,
+                        "error": error_msg
+                    }
+
+            # Extract text safely
+            try:
+                response_text = response.text
+            except ValueError:
+                # If response.text fails, try to extract from parts
+                if candidate.content and candidate.content.parts:
+                    response_text = candidate.content.parts[0].text
+                else:
+                    response_text = ""
+
+            # Get token counts safely
+            try:
+                tokens = {
                     "prompt_tokens": response.usage_metadata.prompt_token_count,
                     "completion_tokens": response.usage_metadata.candidates_token_count,
                     "total_tokens": response.usage_metadata.total_token_count
-                },
+                }
+            except AttributeError:
+                tokens = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+            return {
+                "response": response_text,
+                "tokens": tokens,
                 "latency_ms": latency_ms,
                 "model": self.model,
                 "provider": self.provider
