@@ -3,12 +3,12 @@ title: LangSmithで5つのLLMを比較！トレーシング・エラーハンド
 tags:
   - Python
   - AI
+  - observability
   - LLM
   - LangSmith
-  - observability
 private: false
-updated_at: '2025-11-05T10:35:30+09:00'
-id: null
+updated_at: '2025-11-05T10:44:32+09:00'
+id: bb95295630c647eb5632
 organization_url_name: null
 slide: false
 ignorePublish: false
