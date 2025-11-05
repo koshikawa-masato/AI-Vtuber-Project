@@ -463,7 +463,7 @@ python apps/copy_robot_viewer.py
 
 ---
 
-## 🎓 技術的特徴（転職活動向けアピール）
+## 🎓 技術的特徴
 
 ### RAG実装経験
 
