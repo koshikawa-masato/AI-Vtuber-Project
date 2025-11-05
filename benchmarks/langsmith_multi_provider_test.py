@@ -20,6 +20,32 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.core.llm_tracing import TracedLLM
 from datetime import datetime
 import time
+import httpx
+
+
+def warmup_ollama(model: str, prompt: str, ollama_url: str = "http://localhost:11434"):
+    """
+    Warmup Ollama model (no tracing)
+    """
+    try:
+        with httpx.Client(timeout=120.0) as client:
+            response = client.post(
+                f"{ollama_url}/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "num_predict": 100
+                    }
+                }
+            )
+            response.raise_for_status()
+            return response.json()
+    except Exception as e:
+        print(f"  ⚠️ Warmup failed: {str(e)}")
+        return None
 
 
 def run_benchmark():
@@ -36,11 +62,11 @@ def run_benchmark():
 
     # Model configurations
     models = [
-        {"provider": "ollama", "model": "qwen2.5:3b", "name": "Ollama qwen2.5:3b"},
-        {"provider": "ollama", "model": "qwen2.5:7b", "name": "Ollama qwen2.5:7b"},
-        {"provider": "ollama", "model": "qwen2.5:14b", "name": "Ollama qwen2.5:14b"},
-        {"provider": "openai", "model": "gpt-4o-mini", "name": "OpenAI gpt-4o-mini"},
-        {"provider": "gemini", "model": "gemini-2.5-flash", "name": "Gemini 2.5 Flash"},
+        {"provider": "ollama", "model": "qwen2.5:3b", "name": "ollama_3b"},
+        {"provider": "ollama", "model": "qwen2.5:7b", "name": "ollama_7b"},
+        {"provider": "ollama", "model": "qwen2.5:14b", "name": "ollama_14b"},
+        {"provider": "openai", "model": "gpt-4o-mini", "name": "openai_4o-mini"},
+        {"provider": "gemini", "model": "gemini-2.5-flash", "name": "gemini_2.5-flash"},
     ]
 
     results = []
@@ -50,21 +76,35 @@ def run_benchmark():
         print("-" * 60)
 
         try:
-            # Initialize LLM
+            is_ollama = config["provider"] == "ollama"
+
+            # Ollama: warmup first (no tracing)
+            if is_ollama:
+                print(f"\n  Warmup run (no trace)...")
+                start_warmup = time.time()
+                warmup_result = warmup_ollama(config["model"], test_prompt)
+                warmup_elapsed = time.time() - start_warmup
+                if warmup_result:
+                    print(f"  ✅ Warmup completed: {warmup_elapsed*1000:.2f}ms")
+                else:
+                    print(f"  ⚠️ Warmup failed, continuing anyway...")
+
+            # Measurement run with tracing (all models)
+            print(f"\n  Measurement run (traced to LangSmith)...")
+
             llm = TracedLLM(
                 provider=config["provider"],
                 model=config["model"],
-                project_name="botan-multi-provider-benchmark"
+                project_name="botan-llm-benchmark-v3"
             )
 
-            # Generate
             start_time = time.time()
             result = llm.generate(
                 prompt=test_prompt,
                 temperature=0.7,
                 max_tokens=100,
                 metadata={
-                    "benchmark": "multi_provider_test",
+                    "benchmark": "multi_provider_test_v3",
                     "model_name": config["name"],
                     "timestamp": datetime.now().isoformat()
                 }
@@ -72,12 +112,12 @@ def run_benchmark():
             elapsed = time.time() - start_time
 
             # Display result
-            print(f"✅ Response: {result['response'][:80]}...")
-            print(f"✅ Latency: {result['latency_ms']:.2f}ms (wall time: {elapsed*1000:.2f}ms)")
-            print(f"✅ Tokens: {result['tokens']}")
+            print(f"  ✅ Response: {result['response'][:60]}...")
+            print(f"  ✅ Latency: {result['latency_ms']:.2f}ms (wall time: {elapsed*1000:.2f}ms)")
+            print(f"  ✅ Tokens: {result['tokens']['total_tokens']}")
 
             if 'error' in result:
-                print(f"⚠️ Error: {result['error']}")
+                print(f"  ⚠️ Error: {result['error']}")
 
             results.append({
                 "config": config,
@@ -119,8 +159,11 @@ def run_benchmark():
 
     print("\n🔍 Check LangSmith dashboard:")
     print("   https://smith.langchain.com")
-    print("   Project: botan-multi-provider-benchmark")
+    print("   Project: botan-llm-benchmark-v3")
     print("\n✅ All traces have been sent to LangSmith for visualization!")
+    print("   Note: Only measurement runs are traced (5 total traces)")
+    print("   - Ollama models: 2nd run only (after warmup)")
+    print("   - OpenAI/Gemini: Single run")
     print("="*60)
 
 
@@ -139,7 +182,7 @@ if __name__ == "__main__":
         os.environ["LANGSMITH_TRACING"] = "true"
 
     # Set project name for LangSmith
-    os.environ["LANGSMITH_PROJECT"] = "botan-multi-provider-benchmark"
+    os.environ["LANGSMITH_PROJECT"] = "botan-llm-benchmark-v3"
 
     # Run benchmark
     run_benchmark()
