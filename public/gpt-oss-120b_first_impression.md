@@ -57,9 +57,7 @@ ollama pull gpt-oss:120b
 
 自作のAI VTuberチャットシステム「コピーロボット」で、キャラクター「牡丹」との会話に使ってみました。
 
-![gpt-oss-120bでの会話例](https://github.com/user-attachments/assets/placeholder-image-url)
-
-※実際のスクリーンショットはこちら: `screenshots/run_copy_robot_gpt-oss-120b.jpg`
+![gpt-oss-120bでの会話例](https://github.com/koshikawa-masato/AI-Vtuber-Project/blob/main/screenshots/run_copy_robot_gpt-oss-120b.jpg?raw=true)
 
 ### 思考プロセスのフィルタリング
 
