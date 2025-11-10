@@ -1,5 +1,5 @@
 ---
-title: OpenAIのgpt-oss-120bをOllamaで試してみた【速報】
+title: OpenAIのgpt-oss-120bをOllamaで試してみた
 tags:
   - AI
   - OpenAI
