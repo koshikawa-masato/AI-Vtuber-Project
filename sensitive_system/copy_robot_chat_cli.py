@@ -692,6 +692,16 @@ class CopyRobotChat:
                     if not response:
                         return "[ERROR] Empty response from Ollama"
 
+                    # Filter out "Thinking..." section for gpt-oss models
+                    # Format: "Thinking...\n[思考内容]\n...done thinking.\n\n[実際の本文]"
+                    if response.startswith('Thinking...'):
+                        # Find the end of thinking section
+                        thinking_end = response.find('...done thinking.')
+                        if thinking_end != -1:
+                            # Extract content after thinking section
+                            # Skip "...done thinking." and any whitespace
+                            response = response[thinking_end + len('...done thinking.'):].strip()
+
                     # Calculate elapsed time
                     elapsed_time = time.time() - start_time
 
