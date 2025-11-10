@@ -7,7 +7,7 @@ tags:
   - ollama
   - gpt-oss
 private: false
-updated_at: '2025-11-10T16:17:58+09:00'
+updated_at: '2025-11-10T16:24:21+09:00'
 id: d1aba0e311bc6231b6a3
 organization_url_name: null
 slide: false
