@@ -17,8 +17,10 @@ from .models import WebhookRequest, TextMessage, ReplyRequest
 from . import mock_data
 from .conversation_handler import ConversationHandler, SimpleMockHandler
 from .sensitive_handler_v2 import SensitiveHandler, SimpleMockSensitiveHandler
+from .integrated_sensitive_detector import IntegratedSensitiveDetector
 from .session_manager import SessionManager, SimpleMockSessionManager
 from .websearch_client import WebSearchClient, MockWebSearchClient, GoogleSearchClient, SerpApiClient
+from src.core.llm_ollama import OllamaProvider
 import os
 
 # ロギング設定
@@ -89,22 +91,40 @@ else:
 
 # Phase 5統合: センシティブ判定ハンドラー初期化（本格実装）
 USE_SENSITIVE_CHECK = True  # True: センシティブ判定有効、False: モック
+USE_INTEGRATED_DETECTOR = os.getenv("USE_INTEGRATED_DETECTOR", "true").lower() == "true"  # 4層統合検出器を使用
 SENSITIVE_CHECK_MODE = "hybrid"  # "fast" (NGワードのみ), "full" (LLMのみ), "hybrid" (NGワード+LLM)
 SENSITIVE_JUDGE_PROVIDER = "openai"  # "openai", "ollama", "gemini"
 SENSITIVE_JUDGE_MODEL = "gpt-4o-mini"  # "gpt-4o-mini", "qwen2.5:14b", etc.
 ENABLE_LAYER3 = True  # Layer 3: 動的学習・継続学習を有効化
+ENABLE_LAYER4 = os.getenv("ENABLE_LAYER4", "true").lower() == "true"  # Layer 4: LLM文脈判定
 
 if USE_SENSITIVE_CHECK:
-    sensitive_handler = SensitiveHandler(
-        mode=SENSITIVE_CHECK_MODE,
-        judge_provider=SENSITIVE_JUDGE_PROVIDER,
-        judge_model=SENSITIVE_JUDGE_MODEL,
-        enable_layer3=ENABLE_LAYER3,
-        websearch_func=websearch_func  # WebSearch機能を統合
-    )
-    logger.info(f"Phase 5統合: SensitiveHandler初期化完了（mode={SENSITIVE_CHECK_MODE}, judge={SENSITIVE_JUDGE_PROVIDER}/{SENSITIVE_JUDGE_MODEL}, Layer3={ENABLE_LAYER3}, WebSearch={WEBSEARCH_ENABLED}）")
+    if USE_INTEGRATED_DETECTOR:
+        # 新しい4層統合検出器を使用
+        llm_provider = OllamaProvider(
+            base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+            model=os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
+        )
+        integrated_detector = IntegratedSensitiveDetector(
+            llm_provider=llm_provider,
+            enable_layer4=ENABLE_LAYER4
+        )
+        logger.info(f"Phase 5統合: IntegratedSensitiveDetector初期化完了（Layer4={ENABLE_LAYER4}）")
+        sensitive_handler = None  # 互換性のためNoneに設定
+    else:
+        # 旧SensitiveHandlerを使用（後方互換性）
+        sensitive_handler = SensitiveHandler(
+            mode=SENSITIVE_CHECK_MODE,
+            judge_provider=SENSITIVE_JUDGE_PROVIDER,
+            judge_model=SENSITIVE_JUDGE_MODEL,
+            enable_layer3=ENABLE_LAYER3,
+            websearch_func=websearch_func  # WebSearch機能を統合
+        )
+        logger.info(f"Phase 5統合: SensitiveHandler初期化完了（mode={SENSITIVE_CHECK_MODE}, judge={SENSITIVE_JUDGE_PROVIDER}/{SENSITIVE_JUDGE_MODEL}, Layer3={ENABLE_LAYER3}, WebSearch={WEBSEARCH_ENABLED}）")
+        integrated_detector = None
 else:
     sensitive_handler = SimpleMockSensitiveHandler()
+    integrated_detector = None
     logger.info("Phase 5統合: SimpleMockSensitiveHandler初期化完了（モック）")
 
 # Phase 6-4: ユーザーセッション管理初期化
@@ -211,6 +231,66 @@ async def webhook(
 # イベントハンドラー
 # ========================================
 
+def _perform_sensitive_check(text: str, context: str, speaker: str = None) -> dict:
+    """センシティブ判定を実行（統合版 or 旧版）
+
+    Args:
+        text: 判定対象テキスト
+        context: コンテキスト（"LINE Bot user message" など）
+        speaker: 話者（キャラクター名 or None）
+
+    Returns:
+        統一されたフォーマットの判定結果
+    """
+    if USE_INTEGRATED_DETECTOR and integrated_detector:
+        # 新4層統合検出
+        result = integrated_detector.detect(text, use_layer4=ENABLE_LAYER4)
+
+        # 統一フォーマットに変換
+        return {
+            "tier": result["tier"],
+            "confidence": result["confidence"],
+            "detected_words": result["detected_words"],
+            "detection_layers": result["detection_layers"],
+            "recommended_action": result["recommended_action"],
+            "reason": result["reason"],
+            "final_judgment": result["final_judgment"],
+            "is_integrated": True,
+            "layer4_used": "layer4" in result.get("detection_layers", [])
+        }
+    else:
+        # 旧SensitiveHandler
+        result = sensitive_handler.check(
+            text=text,
+            context=context,
+            speaker=speaker
+        )
+
+        # 旧フォーマットを統一フォーマットに変換
+        recommendation = result.get("recommendation", "allow")
+        if recommendation == "block_immediate":
+            recommended_action = "block"
+        elif recommendation == "review_required":
+            recommended_action = "warn"
+        else:
+            recommended_action = "allow"
+
+        return {
+            "tier": result.get("tier", "Safe"),
+            "confidence": result.get("risk_score", 0.5),
+            "detected_words": result.get("matched_patterns", []),
+            "detection_layers": [result.get("detection_method", "unknown")],
+            "recommended_action": recommended_action,
+            "reason": result.get("reasoning", ""),
+            "final_judgment": f"旧システム: {result.get('detection_method', 'unknown')}",
+            "is_integrated": False,
+            "layer4_used": False,
+            # 旧システム固有のフィールドも保持
+            "sensitive_topics": result.get("sensitive_topics", []),
+            "llm_latency_ms": result.get("llm_latency_ms", 0)
+        }
+
+
 async def handle_text_message(event):
     """テキストメッセージ処理
 
@@ -224,27 +304,49 @@ async def handle_text_message(event):
     logger.info(f"テキストメッセージ: user_id={user_id}, text={message_text}")
 
     # Phase 5統合: ユーザーメッセージのセンシティブ判定
-    sensitive_check_result = sensitive_handler.check(
+    sensitive_check_result = _perform_sensitive_check(
         text=message_text,
         context="LINE Bot user message",
         speaker=None
     )
 
-    tier = sensitive_check_result.get("tier", "Safe")
-    detection_method = sensitive_check_result.get("detection_method", "unknown")
-    llm_latency = sensitive_check_result.get("llm_latency_ms", 0)
+    tier = sensitive_check_result["tier"]
+    recommended_action = sensitive_check_result["recommended_action"]
+    detection_layers = sensitive_check_result.get("detection_layers", [])
+    is_integrated = sensitive_check_result.get("is_integrated", False)
+    layer4_used = sensitive_check_result.get("layer4_used", False)
 
-    if llm_latency > 0:
-        logger.info(f"ユーザーメッセージ判定: tier={tier}, score={sensitive_check_result.get('risk_score', 0):.2f}, method={detection_method}, latency={llm_latency:.0f}ms")
+    # ログ出力
+    if is_integrated:
+        logger.info(
+            f"ユーザーメッセージ判定（統合版）: tier={tier}, action={recommended_action}, "
+            f"confidence={sensitive_check_result['confidence']:.2f}, "
+            f"layers={detection_layers}, layer4={layer4_used}, "
+            f"judgment={sensitive_check_result.get('final_judgment', '')}"
+        )
     else:
-        logger.info(f"ユーザーメッセージ判定: tier={tier}, score={sensitive_check_result.get('risk_score', 0):.2f}, method={detection_method}")
+        llm_latency = sensitive_check_result.get("llm_latency_ms", 0)
+        if llm_latency > 0:
+            logger.info(f"ユーザーメッセージ判定（旧版）: tier={tier}, score={sensitive_check_result['confidence']:.2f}, layers={detection_layers}, latency={llm_latency:.0f}ms")
+        else:
+            logger.info(f"ユーザーメッセージ判定（旧版）: tier={tier}, score={sensitive_check_result['confidence']:.2f}, layers={detection_layers}")
 
-    # Critical判定の場合、応答を拒否
-    if tier == "Critical":
-        categories = sensitive_check_result.get("sensitive_topics", [])
-        category = categories[0] if categories else "unknown"
-        response_text = sensitive_handler.get_safe_response(tier, category)
-        logger.warning(f"Criticalメッセージをブロック: user_id={user_id}, category={category}")
+    # Critical判定 or block推奨の場合、応答を拒否
+    if tier == "Critical" or recommended_action == "block":
+        if is_integrated:
+            # 統合版: 理由から適切な応答を生成
+            response_text = f"すみません、そのメッセージには応答できません。"
+            logger.warning(
+                f"メッセージをブロック: user_id={user_id}, tier={tier}, "
+                f"reason={sensitive_check_result.get('reason', '')}, "
+                f"detected_words={sensitive_check_result.get('detected_words', [])}"
+            )
+        else:
+            # 旧版: 従来通り
+            categories = sensitive_check_result.get("sensitive_topics", [])
+            category = categories[0] if categories else "unknown"
+            response_text = sensitive_handler.get_safe_response(tier, category)
+            logger.warning(f"Criticalメッセージをブロック: user_id={user_id}, category={category}")
 
     else:
         # Phase 1統合: 会話生成（LangSmithトレーシング付き）
@@ -278,29 +380,52 @@ async def handle_text_message(event):
             logger.info(f"応答生成成功: latency={result.get('latency_ms', 0):.0f}ms, tokens={result.get('tokens', {}).get('total_tokens', 0)}")
 
             # Phase 5統合: 生成された応答のセンシティブ判定
-            response_check_result = sensitive_handler.check(
+            response_check_result = _perform_sensitive_check(
                 text=response_text,
                 context="LINE Bot response",
                 speaker=character
             )
 
-            response_tier = response_check_result.get("tier", "Safe")
-            response_detection_method = response_check_result.get("detection_method", "unknown")
-            response_llm_latency = response_check_result.get("llm_latency_ms", 0)
+            response_tier = response_check_result["tier"]
+            response_action = response_check_result["recommended_action"]
+            response_layers = response_check_result.get("detection_layers", [])
+            response_is_integrated = response_check_result.get("is_integrated", False)
+            response_layer4_used = response_check_result.get("layer4_used", False)
 
-            if response_llm_latency > 0:
-                logger.info(f"応答判定: tier={response_tier}, score={response_check_result.get('risk_score', 0):.2f}, method={response_detection_method}, latency={response_llm_latency:.0f}ms")
+            # ログ出力
+            if response_is_integrated:
+                logger.info(
+                    f"応答判定（統合版）: tier={response_tier}, action={response_action}, "
+                    f"confidence={response_check_result['confidence']:.2f}, "
+                    f"layers={response_layers}, layer4={response_layer4_used}, "
+                    f"judgment={response_check_result.get('final_judgment', '')}"
+                )
             else:
-                logger.info(f"応答判定: tier={response_tier}, score={response_check_result.get('risk_score', 0):.2f}, method={response_detection_method}")
+                response_llm_latency = response_check_result.get("llm_latency_ms", 0)
+                if response_llm_latency > 0:
+                    logger.info(f"応答判定（旧版）: tier={response_tier}, score={response_check_result['confidence']:.2f}, layers={response_layers}, latency={response_llm_latency:.0f}ms")
+                else:
+                    logger.info(f"応答判定（旧版）: tier={response_tier}, score={response_check_result['confidence']:.2f}, layers={response_layers}")
 
-            # 応答がCriticalの場合、安全な応答に置き換え
-            if response_tier == "Critical" or response_tier == "Warning":
-                categories = response_check_result.get("sensitive_topics", [])
-                category = categories[0] if categories else "unknown"
-                safe_response = sensitive_handler.get_safe_response(response_tier, category)
-                if safe_response:
-                    logger.warning(f"応答を安全なものに置き換え: tier={response_tier}, category={category}")
+            # 応答がCritical/Warning または warn/block推奨の場合、安全な応答に置き換え
+            if response_tier in ["Critical", "Warning"] or response_action in ["warn", "block"]:
+                if response_is_integrated:
+                    # 統合版: 汎用的な安全応答
+                    safe_response = "ごめんなさい、うまく答えられませんでした..."
+                    logger.warning(
+                        f"応答を安全なものに置き換え（統合版）: tier={response_tier}, action={response_action}, "
+                        f"reason={response_check_result.get('reason', '')}, "
+                        f"detected_words={response_check_result.get('detected_words', [])}"
+                    )
                     response_text = safe_response
+                else:
+                    # 旧版: 従来通り
+                    categories = response_check_result.get("sensitive_topics", [])
+                    category = categories[0] if categories else "unknown"
+                    safe_response = sensitive_handler.get_safe_response(response_tier, category)
+                    if safe_response:
+                        logger.warning(f"応答を安全なものに置き換え（旧版）: tier={response_tier}, category={category}")
+                        response_text = safe_response
 
         except Exception as e:
             logger.error(f"会話生成エラー: {e}")
@@ -503,18 +628,26 @@ async def reload_ng_words():
 
     logger.info("管理リクエスト: NGワードリロード")
 
-    if USE_SENSITIVE_CHECK and hasattr(sensitive_handler, 'reload_ng_words'):
-        count = sensitive_handler.reload_ng_words()
+    # 統合版または旧版のSensitiveHandlerを取得
+    handler = None
+    if USE_INTEGRATED_DETECTOR and integrated_detector:
+        handler = integrated_detector.static_handler
+    elif USE_SENSITIVE_CHECK and sensitive_handler:
+        handler = sensitive_handler
+
+    if handler and hasattr(handler, 'reload_ng_words'):
+        count = handler.reload_ng_words()
         return {
             "status": "ok",
             "message": f"NGワードを再ロードしました",
             "db_ng_words_count": count,
-            "total_patterns": len(sensitive_handler.ng_patterns) + len(sensitive_handler.db_ng_patterns)
+            "total_patterns": len(handler.ng_patterns) + len(handler.db_ng_patterns),
+            "detector_type": "integrated" if USE_INTEGRATED_DETECTOR else "legacy"
         }
     else:
         return {
             "status": "error",
-            "message": "Layer 3が無効、またはリロード機能が利用できません"
+            "message": "センシティブ判定が無効、またはリロード機能が利用できません"
         }
 
 
@@ -542,10 +675,17 @@ async def add_ng_word(
 
     logger.info(f"管理リクエスト: NGワード追加 - {word}")
 
-    if not USE_SENSITIVE_CHECK or not hasattr(sensitive_handler, 'dynamic_detector'):
-        return {"status": "error", "message": "Layer 3が無効です"}
+    # 統合版または旧版のSensitiveHandlerを取得
+    handler = None
+    if USE_INTEGRATED_DETECTOR and integrated_detector:
+        handler = integrated_detector.static_handler
+    elif USE_SENSITIVE_CHECK and sensitive_handler:
+        handler = sensitive_handler
 
-    if not sensitive_handler.dynamic_detector:
+    if not handler or not hasattr(handler, 'dynamic_detector'):
+        return {"status": "error", "message": "センシティブ判定が無効です"}
+
+    if not handler.dynamic_detector:
         return {"status": "error", "message": "DynamicDetectorが利用できません"}
 
     # subcategoryを推定
@@ -558,7 +698,7 @@ async def add_ng_word(
 
     # DBに追加
     import sqlite3
-    db_path = sensitive_handler.dynamic_detector.db_path
+    db_path = handler.dynamic_detector.db_path
 
     try:
         conn = sqlite3.connect(db_path)
@@ -585,7 +725,7 @@ async def add_ng_word(
         conn.close()
 
         # リロード
-        count = sensitive_handler.reload_ng_words()
+        count = handler.reload_ng_words()
 
         return {
             "status": "ok",
