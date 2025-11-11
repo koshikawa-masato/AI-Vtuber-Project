@@ -7,11 +7,19 @@ LINE Bot Phase 6-1: 基本実装
 
 from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Optional
 import hmac
 import hashlib
+import base64
 import logging
 from datetime import datetime
+import requests
+import os
+from dotenv import load_dotenv
+
+# .envファイルを読み込み
+load_dotenv()
 
 from .models import WebhookRequest, TextMessage, ReplyRequest
 from . import mock_data
@@ -21,7 +29,6 @@ from .integrated_sensitive_detector import IntegratedSensitiveDetector
 from .session_manager import SessionManager, SimpleMockSessionManager
 from .websearch_client import WebSearchClient, MockWebSearchClient, GoogleSearchClient, SerpApiClient
 from src.core.llm_ollama import OllamaProvider
-import os
 
 # ロギング設定
 logging.basicConfig(
@@ -37,16 +44,29 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# assetsディレクトリをマウント（キャラクターアイコン配信用）
+app.mount("/assets", StaticFiles(directory="/home/koshikawa/AI-Vtuber-Project/assets"), name="assets")
+
 # ========================================
 # 設定
 # ========================================
 
 # LINE Channel Secret（環境変数から取得、モックモードではダミー）
-CHANNEL_SECRET = "dummy_channel_secret_for_mock_testing"
-MOCK_MODE = True  # モックモード（LINE Developersアカウント不要）
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "dummy_channel_secret_for_mock_testing")
+CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
+MOCK_MODE = os.getenv("LINE_MOCK_MODE", "false").lower() == "true"  # 環境変数から取得
+NGROK_URL = os.getenv("NGROK_URL", "https://dorothy-unmodulative-mariann.ngrok-free.dev")
+
+# 起動時ログ
+if MOCK_MODE:
+    logger.info("🧪 モックモードで起動（LINE Developersアカウント不要）")
+else:
+    logger.info("🚀 本番モードで起動（Café Trois Fleurs）")
+    logger.info(f"   Channel Secret: {'設定済み' if CHANNEL_SECRET else '未設定'}")
+    logger.info(f"   Access Token: {'設定済み' if CHANNEL_ACCESS_TOKEN else '未設定'}")
 
 # Phase 1統合: 会話ハンドラー初期化
-USE_REAL_LLM = False  # True: 実際のLLM使用、False: モック
+USE_REAL_LLM = os.getenv("LINE_USE_REAL_LLM", "false").lower() == "true"  # 環境変数から取得
 if USE_REAL_LLM:
     conversation_handler = ConversationHandler(
         provider="ollama",
@@ -133,6 +153,72 @@ logger.info("Phase 6-4: SessionManager初期化完了")
 
 
 # ========================================
+# LINE Messaging API 返信機能
+# ========================================
+
+def send_line_reply(reply_token: str, message: str, character: str = "botan") -> bool:
+    """LINE Messaging APIでメッセージを返信
+
+    Args:
+        reply_token: LINE reply token
+        message: 返信メッセージ
+        character: キャラクターID (botan/kasho/yuri)
+
+    Returns:
+        成功したらTrue、失敗したらFalse
+    """
+    if MOCK_MODE:
+        logger.info(f"[MOCK] LINE返信 ({character}): {message}")
+        return True
+
+    # キャラクター情報マッピング
+    character_info = {
+        "botan": {
+            "name": "牡丹",
+            "iconUrl": f"{NGROK_URL}/assets/botan.png"
+        },
+        "kasho": {
+            "name": "Kasho",
+            "iconUrl": f"{NGROK_URL}/assets/kasho.png"
+        },
+        "yuri": {
+            "name": "ユリ",
+            "iconUrl": f"{NGROK_URL}/assets/yuri.png"
+        }
+    }
+
+    sender_info = character_info.get(character, character_info["botan"])
+
+    url = "https://api.line.me/v2/bot/message/reply"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+    }
+    data = {
+        "replyToken": reply_token,
+        "messages": [
+            {
+                "type": "text",
+                "text": message,
+                "sender": {
+                    "name": sender_info["name"],
+                    "iconUrl": sender_info["iconUrl"]
+                }
+            }
+        ]
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        response.raise_for_status()
+        logger.info(f"LINE返信成功 ({character}): {message[:50]}...")
+        return True
+    except requests.exceptions.RequestException as e:
+        logger.error(f"LINE返信エラー: {e}")
+        return False
+
+
+# ========================================
 # 署名検証
 # ========================================
 
@@ -156,7 +242,7 @@ def verify_signature(body: bytes, signature: str, channel_secret: str) -> bool:
         body,
         hashlib.sha256
     ).digest()
-    expected_signature = hashlib.b64encode(hash).decode('utf-8')
+    expected_signature = base64.b64encode(hash).decode('utf-8')
 
     return hmac.compare_digest(signature, expected_signature)
 
@@ -331,6 +417,10 @@ async def handle_text_message(event):
         else:
             logger.info(f"ユーザーメッセージ判定（旧版）: tier={tier}, score={sensitive_check_result['confidence']:.2f}, layers={detection_layers}")
 
+    # Phase 6-4: ユーザーの選択キャラクターを取得（未選択の場合は牡丹）
+    character = session_manager.get_character_or_default(user_id, default="botan")
+    logger.info(f"Selected character for user {user_id}: {character}")
+
     # Critical判定 or block推奨の場合、応答を拒否
     if tier == "Critical" or recommended_action == "block":
         if is_integrated:
@@ -350,11 +440,6 @@ async def handle_text_message(event):
 
     else:
         # Phase 1統合: 会話生成（LangSmithトレーシング付き）
-        # Phase 6-4: ユーザーセッション管理（キャラクター選択）
-
-        # ユーザーの選択キャラクターを取得（未選択の場合は牡丹）
-        character = session_manager.get_character_or_default(user_id, default="botan")
-        logger.info(f"Selected character for user {user_id}: {character}")
 
         # 会話生成
         try:
@@ -431,13 +516,8 @@ async def handle_text_message(event):
             logger.error(f"会話生成エラー: {e}")
             response_text = "ごめんなさい、エラーが発生しました..."
 
-    if MOCK_MODE:
-        logger.info(f"モックモード: 返信をログ出力のみ")
-        logger.info(f"  reply_token={reply_token}")
-        logger.info(f"  response={response_text}")
-    else:
-        # TODO: LINE Messaging APIで実際に返信
-        pass
+    # LINE Messaging APIで返信（キャラクター情報付き）
+    send_line_reply(reply_token, response_text, character)
 
 
 async def handle_follow(event):
@@ -455,13 +535,8 @@ async def handle_follow(event):
 
     welcome_message = "友だち追加ありがとうございます！\n牡丹プロジェクトへようこそ！"
 
-    if MOCK_MODE:
-        logger.info(f"モックモード: ウェルカムメッセージをログ出力のみ")
-        logger.info(f"  reply_token={reply_token}")
-        logger.info(f"  message={welcome_message}")
-    else:
-        # TODO: LINE Messaging APIで実際に返信
-        pass
+    # LINE Messaging APIで返信（デフォルトは牡丹）
+    send_line_reply(reply_token, welcome_message, "botan")
 
 
 async def handle_postback(event):
@@ -487,21 +562,16 @@ async def handle_postback(event):
             # キャラクター名のマッピング
             character_names = {
                 "botan": "牡丹",
-                "kasho": "花相",
-                "yuri": "百合"
+                "kasho": "Kasho",
+                "yuri": "ユリ"
             }
             character_name = character_names.get(character, character)
 
             response_text = f"{character_name}を選択しました！よろしくね♪"
             logger.info(f"キャラクター選択完了: user_id={user_id}, character={character}")
 
-            if MOCK_MODE:
-                logger.info(f"モックモード: キャラクター選択応答をログ出力のみ")
-                logger.info(f"  reply_token={reply_token}")
-                logger.info(f"  response={response_text}")
-            else:
-                # TODO: LINE Messaging APIで実際に返信
-                pass
+            # LINE Messaging APIで返信（選択したキャラクターで）
+            send_line_reply(reply_token, response_text, character)
         else:
             logger.warning(f"Invalid character selected: {character}")
     else:
