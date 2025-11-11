@@ -2,19 +2,17 @@
 title: AI VTuberの炎上を防ぐ：4層防御のセンシティブ判定システムと月250回API制限の最適化戦略
 tags:
   - Python
+  - Security
   - AI
-  - VTuber
+  - Vtuber
   - LLM
-  - セキュリティ
 private: false
-updated_at: ''
-id: null
+updated_at: '2025-11-11T16:23:48+09:00'
+id: 828e7a2292d25cae9219
 organization_url_name: null
 slide: false
 ignorePublish: false
 ---
-
-# AI VTuberの炎上を防ぐ：4層防御のセンシティブ判定システムと月250回API制限の最適化戦略
 
 ## はじめに
 
