@@ -7,7 +7,7 @@ tags:
   - Vtuber
   - LLM
 private: false
-updated_at: '2025-11-11T16:23:48+09:00'
+updated_at: '2025-11-11T16:25:00+09:00'
 id: 828e7a2292d25cae9219
 organization_url_name: null
 slide: false
@@ -276,7 +276,7 @@ def llm_context_check(text: str, detected_words: List[str]) -> Dict:
 **SerpApi選定理由**:
 - Google検索結果を直接取得可能
 - シンプルなREST API
-- 日次制限なし（月250回を柔軟に配分可能）
+- 月250回の無料枠（プロジェクト側で日次8件/日に制限して運用）
 - セットアップが容易
 
 ### 3.2 基本実装
