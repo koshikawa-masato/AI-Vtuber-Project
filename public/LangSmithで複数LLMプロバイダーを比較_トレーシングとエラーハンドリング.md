@@ -30,7 +30,7 @@ LLMアプリケーション開発において、**モデルの性能比較**と*
 
 ## 📦 対象プロバイダー
 
-- **Ollama**（ローカルLLM）：qwen2.5:3b / 7b / 14b
+- ** Ollama（ローカルLLM） **：qwen2.5:3b / 7b / 14b
 - **OpenAI API**：gpt-4o-mini
 - **Google Gemini API**：gemini-2.5-flash
 

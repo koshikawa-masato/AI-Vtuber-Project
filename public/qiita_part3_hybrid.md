@@ -181,7 +181,7 @@ sorted_memories = sorted(all_memories, key=lambda x: x['similarity'])
 | **RAG・ベクトル検索が必要** | **PostgreSQL** | pgvectorでベクトル検索が高速 |
 | **構造化 + ベクトルのハイブリッド** | **PostgreSQL** | 1つのクエリで両方実行可能 |
 | **プロトタイピング・小規模** | **SQLite** | セットアップ不要、軽量 |
-| **シンプルなWebアプリ（CRUD）** | **MySQL** | 単純クエリが高速 |
+| ** シンプルなWebアプリ（CRUD） ** | **MySQL** | 単純クエリが高速 |
 | **WordPress等の既存システム** | **MySQL** | デファクトスタンダード |
 
 ### 今回PostgreSQLを選んだ理由
@@ -707,7 +707,7 @@ PostgreSQL + pgvector
 |------|------|------|
 | 第1弾 | RAGを試して気づいたこと | ✅ [公開済み](https://qiita.com/koshikawa-masato/items/ba2a5d0105c2ea173ff7) |
 | 第2弾 | 記憶製造機の設計（構造化記憶） | ✅ [公開済み](https://qiita.com/koshikawa-masato/items/b871051dd89dcafb1e5d) |
-| **第3弾** | **ハイブリッドアプローチ（RAG + 構造化）** | ✅ **本記事** |
+| **第3弾** | ** ハイブリッドアプローチ（RAG + 構造化） ** | ✅ **本記事** |
 
 ---
 
