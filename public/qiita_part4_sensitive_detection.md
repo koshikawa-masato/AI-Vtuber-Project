@@ -508,12 +508,9 @@ class WebSearchOptimizer:
         """)
 
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS usage_tracking (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                query_text TEXT NOT NULL,
-                searched_at TEXT NOT NULL,
-                year_month TEXT NOT NULL,
-                cache_hit INTEGER DEFAULT 0
+            CREATE TABLE IF NOT EXISTS daily_api_calls (
+                date TEXT PRIMARY KEY,
+                call_count INTEGER DEFAULT 0
             )
         """)
 
@@ -615,13 +612,14 @@ def get_daily_usage(self) -> Dict:
 
     today = datetime.now().strftime("%Y-%m-%d")
 
-    # API呼び出し数（キャッシュミス）
+    # 今日のAPI呼び出し数を取得
     cursor.execute("""
-        SELECT COUNT(*) FROM usage_tracking
-        WHERE DATE(searched_at) = ? AND cache_hit = 0
+        SELECT call_count FROM daily_api_calls
+        WHERE date = ?
     """, (today,))
 
-    api_calls = cursor.fetchone()[0]
+    row = cursor.fetchone()
+    api_calls = row[0] if row else 0
     remaining = self.daily_limit - api_calls
 
     conn.close()
@@ -714,10 +712,7 @@ Test 4: 日次制限（8件/日）
 ======================================================================
 
 今日の使用状況:
-  総クエリ数: 2
   API呼び出し数: 1/8
-  キャッシュヒット数: 1
-  キャッシュヒット率: 50.0%
   残り検索可能数: 7
 
   ✅ 制限内（あと7件検索可能）
@@ -736,46 +731,40 @@ Test 4: 日次制限（8件/日）
 ### 4.4 統計の可視化
 
 ```python
-def get_cache_stats(client: SerpApiClient) -> None:
-    """統計を表示"""
-    stats = client.get_cache_stats()
+def get_usage_stats(client: SerpApiClient) -> None:
+    """使用状況を表示（SerpApi Account APIベース）"""
 
-    print(f"📊 今日の使用状況:")
-    print(f"  API呼び出し: {stats['daily_usage']['api_calls']}/8")
-    print(f"  キャッシュヒット率: {stats['daily_usage']['cache_hit_rate']:.1%}")
-    print(f"  残り検索可能数: {stats['daily_usage']['remaining']}")
+    # SerpApi公式の使用量を取得
+    account_info = client.get_account_info()
 
-    print(f"\n📊 今月の使用状況:")
-    print(f"  API呼び出し: {stats['monthly_usage']['api_calls']}/250")
-    print(f"  残り検索可能数: {stats['monthly_usage']['remaining']}")
+    if account_info:
+        print(f"📊 SerpApi使用状況（公式）")
+        print(f"  月間検索上限: {account_info['searches_per_month']}")
+        print(f"  今月の使用量: {account_info['this_month_usage']}/250")
+        print(f"  残り検索数: {account_info['plan_searches_left']}")
 
-    print(f"\n📊 キャッシュ統計:")
-    print(f"  総エントリ数: {stats['total_entries']}")
-    print(f"  平均ヒット数: {stats['avg_hit_count']}")
-    print(f"\n  上位クエリ:")
-    for i, (query, hit_count) in enumerate(stats['top_queries'][:5], 1):
-        print(f"    {i}. '{query}' ({hit_count}回)")
+        usage_rate = account_info['this_month_usage'] / account_info['searches_per_month']
+        print(f"  使用率: {usage_rate:.1%}")
+
+    # 日次制限（プロジェクト独自）
+    optimizer = WebSearchOptimizer()
+    daily = optimizer.get_daily_usage()
+    print(f"\n📅 本日の制限（8件/日）")
+    print(f"  本日の使用: {daily['api_calls']}/8")
+    print(f"  残り: {daily['remaining']}件")
 ```
 
 **出力例**:
 ```
-📊 今日の使用状況:
-  API呼び出し: 3/8
-  キャッシュヒット率: 62.5%
-  残り検索可能数: 5
+📊 SerpApi使用状況（公式）
+  月間検索上限: 250
+  今月の使用量: 6/250
+  残り検索数: 244
+  使用率: 2.4%
 
-📊 今月の使用状況:
-  API呼び出し: 45/250
-  残り検索可能数: 205
-
-📊 キャッシュ統計:
-  総エントリ数: 28
-  平均ヒット数: 3.2
-
-  上位クエリ:
-    1. 'vtuber セクハラ' (8回)
-    2. '配信 不適切' (5回)
-    3. 'ハラスメント 問題' (4回)
+📅 本日の制限（8件/日）
+  本日の使用: 0/8
+  残り: 8件
 ```
 
 ---
@@ -859,8 +848,7 @@ test_cases = [
 3. クエリ正規化
 4. 日次制限（8件/日）
 5. 優先度フィルタリング
-6. 月次トラッキング（250件/月）
-7. キャッシュ統計
+6. キャッシュ統計
 
 **実行結果**:
 ```
@@ -892,29 +880,33 @@ Test 4: 日次制限（8件/日）
 ======================================================================
 
 今日の使用状況:
-  総クエリ数: 2
   API呼び出し数: 1/8
-  キャッシュヒット数: 1
-  キャッシュヒット率: 50.0%
   残り検索可能数: 7
 
   ✅ 制限内（あと7件検索可能）
 
 ======================================================================
-Test 6: 月次トラッキング（250件/月）
+Test 5: 優先度フィルタリング
 ======================================================================
 
-2025-11 の使用状況:
-  総クエリ数: 2
-  API呼び出し数: 1/250
-  キャッシュヒット数: 1
-  キャッシュヒット率: 50.0%
-  残り検索可能数: 249
+日次残り: 7件
+  高優先度クエリ: ✅ 実行可能
+  通常優先度クエリ: ✅ 実行可能
+  低優先度クエリ: ✅ 実行可能
 
-使用率: 0.4%
-  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]
+日次残り: 2件（制限間近）
+  高優先度クエリ: ✅ 実行可能
+  通常優先度クエリ: ✅ 実行可能
+  低優先度クエリ: ❌ スキップ（制限間近のため低優先度を抑制）
 
-  ✅ 月次制限内（あと249件検索可能）
+日次残り: 1件（制限間近）
+  高優先度クエリ: ✅ 実行可能
+  通常優先度クエリ: ❌ スキップ（制限間近のため通常優先度を抑制）
+
+日次残り: 0件（制限到達）
+  高優先度クエリ: ❌ ブロック（日次制限到達）
+
+  ✅ 優先度フィルタリング正常動作
 
 ======================================================================
 テスト結果サマリー
@@ -924,7 +916,6 @@ Test 6: 月次トラッキング（250件/月）
   クエリ正規化: ✅ PASS
   日次制限: ✅ PASS
   優先度フィルタリング: ✅ PASS
-  月次トラッキング: ✅ PASS
   キャッシュ統計: ✅ PASS
 ======================================================================
 
@@ -934,8 +925,7 @@ Test 6: 月次トラッキング（250件/月）
 **実測データ**:
 - キャッシュヒット率: **50%** (初回テスト)
 - 日次使用量: **1/8件**
-- 月次使用量: **1/250件**
-- 残り検索可能数: **249件**
+- 月次使用量: **SerpApi Account APIから取得**（正確な値はSerpApiダッシュボードで確認）
 
 ### 5.4 WebSearch統合テスト結果
 
