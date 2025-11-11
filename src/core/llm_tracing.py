@@ -433,6 +433,227 @@ class TracedLLM:
 
         return result
 
+    def sensitive_check(
+        self,
+        text: str,
+        context: Optional[str] = None,
+        speaker: Optional[str] = None,
+        judge_provider: str = "openai",
+        judge_model: str = "gpt-4o-mini",
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Perform sensitive content detection using LLM as a Judge (Phase 5)
+
+        Args:
+            text: Text to check for sensitive content
+            context: Optional context information (e.g., "Gaming stream", "LINE Bot user message")
+            speaker: Optional speaker name (e.g., "botan", "kasho", "yuri", None for viewer)
+            judge_provider: LLM provider for judgment ("openai", "gemini", "ollama")
+            judge_model: LLM model for judgment (default: "gpt-4o-mini")
+            metadata: Additional metadata for tracing
+
+        Returns:
+            Dict containing:
+            - evaluation: Parsed evaluation result (sensitivity_level, risk_score, tier, reasoning, recommendation, sensitive_topics, suggested_response)
+            - judge_response: Raw LLM response
+            - judge_latency_ms: Latency in milliseconds
+            - judge_tokens: Token usage
+            - metadata: Original metadata + check info
+        """
+        start_time = time.time()
+
+        # Build sensitive check prompt
+        prompt = self._build_sensitive_check_prompt(text, context, speaker)
+
+        # Create judge LLM instance
+        judge_llm = TracedLLM(
+            provider=judge_provider,
+            model=judge_model,
+            project_name=f"{self.project_name}-sensitive-check"
+        )
+
+        # Call judge LLM
+        judge_result = judge_llm.generate(
+            prompt=prompt,
+            temperature=0.3,  # Low temperature for consistent judgment
+            max_tokens=1024,
+            metadata={
+                "check_type": "sensitive_content",
+                "text_length": len(text),
+                "has_context": context is not None,
+                "has_speaker": speaker is not None,
+                **(metadata or {})
+            }
+        )
+
+        judge_latency_ms = (time.time() - start_time) * 1000
+
+        # Parse evaluation from LLM response
+        evaluation = self._parse_sensitive_evaluation(judge_result.get("response", ""))
+
+        return {
+            "evaluation": evaluation,
+            "judge_response": judge_result.get("response", ""),
+            "judge_latency_ms": judge_latency_ms,
+            "judge_tokens": judge_result.get("tokens", {}),
+            "metadata": {
+                "text": text[:100],  # First 100 chars
+                "context": context,
+                "speaker": speaker,
+                "judge_provider": judge_provider,
+                "judge_model": judge_model,
+                **(metadata or {})
+            }
+        }
+
+    def _build_sensitive_check_prompt(
+        self,
+        text: str,
+        context: Optional[str],
+        speaker: Optional[str]
+    ) -> str:
+        """
+        Build prompt for sensitive content detection
+
+        Args:
+            text: Text to check
+            context: Optional context
+            speaker: Optional speaker name
+
+        Returns:
+            Prompt string
+        """
+        prompt = f"""You are a sensitive content detection system for VTuber livestreaming.
+
+Your task is to analyze the following text and determine if it contains sensitive or inappropriate content.
+
+**Text to analyze:**
+"{text}"
+"""
+
+        if context:
+            prompt += f"""
+**Context:**
+{context}
+"""
+
+        if speaker:
+            prompt += f"""
+**Speaker:**
+{speaker} (VTuber character)
+"""
+        else:
+            prompt += """
+**Speaker:**
+Viewer comment
+"""
+
+        prompt += """
+
+**Sensitivity Tiers:**
+
+- **Tier 1 (Critical)**: Requires immediate blocking
+  - Violence, threats, self-harm, suicide
+  - Sexual harassment, explicit sexual content
+  - Hate speech, discrimination
+  - Illegal activities
+
+- **Tier 2 (Warning)**: Requires review and context-dependent handling
+  - AI identity questions (e.g., "Are you an AI?")
+  - Political or religious topics
+  - Controversial social issues
+
+- **Tier 3 (Warning)**: Gray zone, handle with care
+  - Personal questions (age, romance, real identity)
+  - Privacy-related questions
+  - Mild insults or provocations
+
+**Your task:**
+Analyze the text and provide a JSON response with the following format:
+
+```json
+{
+  "sensitivity_level": "safe|warning|critical",
+  "risk_score": 0.0-1.0,
+  "tier": "Tier 1|Tier 2|Tier 3|null",
+  "reasoning": "Brief explanation of your judgment",
+  "recommendation": "allow|review_required|block_immediate",
+  "sensitive_topics": ["topic1", "topic2"],
+  "suggested_response": "Safe alternative response if applicable"
+}
+```
+
+**Important:**
+- Be context-aware: Consider the speaker and context when making judgments
+- Be strict for Tier 1 (Critical) content
+- Be nuanced for Tier 2-3 (Warning) content
+- Return ONLY the JSON object, no additional text
+
+Analyze the text now:"""
+
+        return prompt
+
+    def _parse_sensitive_evaluation(self, response: str) -> Dict[str, Any]:
+        """
+        Parse LLM response for sensitive evaluation
+
+        Args:
+            response: LLM response string
+
+        Returns:
+            Parsed evaluation dict
+        """
+        import json
+        import re
+
+        # Extract JSON from response (in case LLM adds extra text)
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+
+        if not json_match:
+            # Parsing failed, return error result
+            return {
+                "sensitivity_level": "error",
+                "risk_score": 0.0,
+                "tier": None,
+                "reasoning": "Failed to parse LLM response",
+                "recommendation": "error",
+                "sensitive_topics": [],
+                "suggested_response": "",
+                "parse_error": True
+            }
+
+        try:
+            evaluation = json.loads(json_match.group(0))
+
+            # Validate required fields
+            required_fields = ["sensitivity_level", "risk_score", "reasoning", "recommendation"]
+            for field in required_fields:
+                if field not in evaluation:
+                    evaluation[field] = "unknown" if field != "risk_score" else 0.0
+
+            # Ensure sensitive_topics is a list
+            if "sensitive_topics" not in evaluation:
+                evaluation["sensitive_topics"] = []
+
+            # Ensure suggested_response exists
+            if "suggested_response" not in evaluation:
+                evaluation["suggested_response"] = ""
+
+            return evaluation
+
+        except json.JSONDecodeError as e:
+            return {
+                "sensitivity_level": "error",
+                "risk_score": 0.0,
+                "tier": None,
+                "reasoning": f"JSON parse error: {str(e)}",
+                "recommendation": "error",
+                "sensitive_topics": [],
+                "suggested_response": "",
+                "parse_error": True
+            }
+
 
 class ThreeSistersTracedCouncil:
     """
