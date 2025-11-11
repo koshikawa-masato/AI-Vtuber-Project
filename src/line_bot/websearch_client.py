@@ -9,6 +9,7 @@ import requests
 import logging
 from typing import Optional, Dict
 from datetime import datetime, timedelta
+from .websearch_optimizer import WebSearchOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -19,32 +20,44 @@ class SerpApiClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        cache_enabled: bool = True,
-        cache_ttl: int = 86400  # 24時間
+        enable_optimizer: bool = True,
+        cache_ttl: int = 604800,  # 7日間（デフォルト）
+        daily_limit: int = 8  # 1日8件まで
     ):
         """初期化
 
         Args:
             api_key: SerpApi API Key
-            cache_enabled: キャッシュを有効化
+            enable_optimizer: Optimizer有効化（永続キャッシュ、使用量トラッキング）
             cache_ttl: キャッシュTTL（秒）
+            daily_limit: 日次検索上限
         """
         self.api_key = api_key or os.getenv("SERPAPI_API_KEY")
         self.endpoint = "https://serpapi.com/search"
-        self.cache_enabled = cache_enabled
-        self.cache_ttl = cache_ttl
-        self.cache: Dict[str, tuple] = {}  # {query: (result, timestamp)}
+        self.enable_optimizer = enable_optimizer
+
+        # Optimizer初期化（永続キャッシュ、使用量トラッキング）
+        if self.enable_optimizer:
+            self.optimizer = WebSearchOptimizer(
+                cache_ttl=cache_ttl,
+                daily_limit=daily_limit
+            )
+            logger.info("SerpApi with Optimizer enabled (persistent cache, usage tracking)")
+        else:
+            self.optimizer = None
+            logger.info("SerpApi with Optimizer disabled (simple mode)")
 
         if not self.api_key:
             logger.warning("SerpApi API key not configured. WebSearch will be disabled.")
 
-    def search(self, query: str, num: int = 3, lang: str = "ja") -> Optional[str]:
+    def search(self, query: str, num: int = 3, lang: str = "ja", priority: str = "normal") -> Optional[str]:
         """WebSearchを実行
 
         Args:
             query: 検索クエリ
             num: 取得件数（1-10）
             lang: 言語
+            priority: 検索優先度（"high", "normal", "low"）- Optimizer有効時のみ使用
 
         Returns:
             検索結果テキスト（スニペットを結合）
@@ -54,16 +67,17 @@ class SerpApiClient:
             logger.error("SerpApi API key not configured")
             return None
 
-        # キャッシュチェック
-        if self.cache_enabled and query in self.cache:
-            result, timestamp = self.cache[query]
-            age = (datetime.now() - timestamp).total_seconds()
-            if age < self.cache_ttl:
-                logger.debug(f"Cache hit: {query} (age: {age:.0f}s)")
-                return result
-            else:
-                logger.debug(f"Cache expired: {query} (age: {age:.0f}s)")
-                del self.cache[query]
+        # Optimizer有効時: 永続キャッシュチェック
+        if self.optimizer:
+            cached_result = self.optimizer.get_cached_result(query)
+            if cached_result:
+                return cached_result
+
+            # 使用量チェック（日次制限）
+            should_search, reason = self.optimizer.should_search(query, priority=priority)
+            if not should_search:
+                logger.warning(f"Search skipped: {reason} (query: '{query}', priority: {priority})")
+                return None
 
         try:
             params = {
@@ -75,7 +89,7 @@ class SerpApiClient:
                 "engine": "google"
             }
 
-            logger.info(f"SerpApi request: query='{query}', num={num}")
+            logger.info(f"SerpApi request: query='{query}', num={num}, priority={priority}")
 
             response = requests.get(
                 self.endpoint,
@@ -95,10 +109,9 @@ class SerpApiClient:
 
             result_text = " ".join(snippets)
 
-            # キャッシュに保存
-            if self.cache_enabled:
-                self.cache[query] = (result_text, datetime.now())
-                logger.debug(f"Cache saved: {query}")
+            # Optimizer有効時: 永続キャッシュに保存
+            if self.optimizer:
+                self.optimizer.save_to_cache(query, result_text)
 
             logger.info(f"SerpApi success: query='{query}', result_length={len(result_text)}")
             return result_text
@@ -125,31 +138,42 @@ class SerpApiClient:
 
     def clear_cache(self):
         """キャッシュをクリア"""
-        cache_size = len(self.cache)
-        self.cache.clear()
-        logger.info(f"SerpApi cache cleared ({cache_size} entries)")
+        if self.optimizer:
+            # Optimizer有効時: 期限切れキャッシュのみクリア
+            self.optimizer.cleanup_expired_cache()
+            logger.info("SerpApi optimizer cache cleaned up (expired entries only)")
+        else:
+            logger.info("No cache to clear (optimizer disabled)")
 
     def get_cache_stats(self) -> Dict:
         """キャッシュ統計を取得
 
         Returns:
+            Optimizer有効時:
             {
-                "size": キャッシュエントリ数,
-                "oldest": 最も古いエントリの経過時間（秒）,
-                "newest": 最も新しいエントリの経過時間（秒）
+                "total_entries": キャッシュエントリ数,
+                "top_queries": 上位クエリ,
+                "avg_hit_count": 平均ヒット数,
+                "daily_usage": 今日の使用量,
+                "monthly_usage": 今月の使用量
+            }
+            Optimizer無効時:
+            {
+                "optimizer": False
             }
         """
-        if not self.cache:
-            return {"size": 0, "oldest": None, "newest": None}
+        if self.optimizer:
+            cache_stats = self.optimizer.get_cache_stats()
+            daily_usage = self.optimizer.get_daily_usage()
+            monthly_usage = self.optimizer.get_monthly_usage()
 
-        now = datetime.now()
-        ages = [(now - timestamp).total_seconds() for _, timestamp in self.cache.values()]
-
-        return {
-            "size": len(self.cache),
-            "oldest": max(ages) if ages else None,
-            "newest": min(ages) if ages else None
-        }
+            return {
+                **cache_stats,
+                "daily_usage": daily_usage,
+                "monthly_usage": monthly_usage
+            }
+        else:
+            return {"optimizer": False}
 
 
 class GoogleSearchClient:
