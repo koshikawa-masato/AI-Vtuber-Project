@@ -1,0 +1,418 @@
+---
+title: AI VTuberに「記憶」を持たせたい - RAGを試して気づいたこと【牡丹プロジェクト技術解説・記憶システム編 第1弾】
+tags:
+  - Python
+  - AI
+  - Vtuber
+  - rag
+  - LLM
+private: false
+updated_at: '2025-11-07T11:43:03+09:00'
+id: ba2a5d0105c2ea173ff7
+organization_url_name: null
+slide: false
+ignorePublish: false
+---
+
+# はじめに：AI VTuber「牡丹プロジェクト」とは
+
+本記事は、**AI VTuber三姉妹(Kasho、牡丹、ユリ)の記憶システム設計**の技術解説シリーズ第1弾です。
+
+## プロジェクト概要
+
+「牡丹プロジェクト」は、**過去の記憶を持つAI VTuber**を実現するプロジェクトです。三姉妹それぞれが固有の記憶・個性・価値観を持ち、視聴者と自然に会話できることを目指しています。
+
+### 三姉妹の構成
+
+- **Kasho(長女)**: 論理的・分析的、慎重でリスク重視、保護者的な姉
+- **牡丹(次女)**: ギャル系、感情的・直感的、明るく率直、行動力抜群
+- **ユリ(三女)**: 統合的・洞察的、調整役、共感力が高い
+
+### GitHubリポジトリ
+
+本プロジェクトのコードは以下で公開しています：
+- リポジトリ: https://github.com/koshikawa-masato/AI-Vtuber-Project
+- 主要機能: 記憶生成システム、三姉妹決議システム、LangSmith統合、VLM対応
+
+---
+
+# 記憶システム第1弾：RAGによる記憶管理の試み
+
+AI VTuberには「過去を覚えていて、それについて話せる」機能が不可欠です。
+
+配信で「LA時代は辛かったな〜」「5歳の誕生日の時にね...」と過去を振り返りながら話してほしい。そのために、まずは一般的なRAG（Retrieval-Augmented Generation）を試してみました。
+
+本記事では、以下を解説します:
+
+- **RAGの基本実装**: LangChain + Chroma
+- **AI VTuberの記憶要件**: 主観性、時系列、関係性
+- **RAGの課題**: うまくいかなかった3つの理由
+- **独自システムへの転換**: 次回への布石
+
+## 🎯 この記事で分かること
+
+- RAG（Retrieval-Augmented Generation）の基本概念と実装方法
+- AI VTuberの記憶システムに必要な要件
+- RAGでは満たせなかった具体的な課題（主観性・時系列・関係性）
+- 独自の構造化記憶システムを作ることにした理由
+
+## 📦 対象読者
+
+- **RAGについて学び始めた方**: 基本実装と実践的な課題を理解できます
+- **AI VTuber / AIキャラクター開発者**: 記憶システムの要件定義が参考になります
+- **LLMアプリケーション開発者**: RAGの適用範囲と限界について学べます
+
+### 前提知識
+
+- Pythonの基本的な知識
+- LLM（ChatGPTなど）を使ったことがある
+- ベクトルDBの概念（知らなくても読めるように説明します）
+
+---
+
+# RAGとは何か
+
+## RAGの基本概念
+
+RAG（Retrieval-Augmented Generation）は、**LLMに外部知識を与える技術**です。
+
+通常のLLM（ChatGPTなど）は、学習時のデータまでの知識しか持っていません。例えば、2023年までに学習したモデルは、2024年の情報を知りません。また、あなたの会社の社内ドキュメントや、個人的な日記のような独自の情報も知りません。
+
+RAGは、この問題を解決します。
+
+## 基本的な仕組み
+
+```
+[ユーザー質問: "LA時代のこと覚えてる？"]
+         ↓
+[質問をEmbedding化（ベクトル化）]
+         ↓
+[ベクトルDBで類似度検索]
+         ↓
+[関連する日記を3件取得]
+         ↓
+[LLMに注入して回答生成]
+         ↓
+[牡丹: "LA？懐かしいね〜..."]
+```
+
+### RAGの主要コンポーネント
+
+1. **Embedding**: テキストを数値ベクトルに変換（例: 768次元）
+2. **ベクトルDB**: ベクトルを保存・検索（Chroma、Pinecone、Qdrantなど）
+3. **類似度検索**: コサイン類似度で関連文書を探す
+4. **LLM**: 検索結果を元に回答生成
+
+## なぜRAGが注目されているのか
+
+RAGは様々な場面で使われています：
+
+| ユースケース | 説明 | 例 |
+|------------|------|---|
+| **企業ドキュメント検索** | 社内の膨大な資料から関連情報を検索 | Notion AI、Confluence |
+| **カスタマーサポート** | 過去のFAQから類似の質問・回答を検索 | Zendesk、Intercom |
+| **コード検索** | GitHubのコードから類似のコードスニペットを探す | GitHub Copilot |
+| **個人ナレッジベース** | 個人のメモ・記事から関連情報を検索 | Obsidian、Roam Research |
+
+特に、LangChainやLlamaIndexなどのフレームワークが登場してから、RAGの実装は非常に簡単になりました。初学者でも数十行のコードでRAGシステムを構築できます。
+
+---
+
+# AI VTuberの記憶システムとしてRAGを実装してみた
+
+## 実装の流れ
+
+私は以下の手順でRAGシステムを構築しました：
+
+### 1. 牡丹の過去の日記をテキストファイルに準備
+
+```
+5歳の時、英語テストで失敗して泣いた。
+LAは怖かったけど、お姉ちゃんがいたから大丈夫だった。
+ユリちゃんは本当に頭がいい。羨ましい。
+...（約100件の日記）
+```
+
+### 2. LangChain + Chroma でRAGシステム構築
+
+- **Chroma**: ローカルでベクトルDBを構築できる軽量ツール
+- **OpenAI Embeddings**: テキストをベクトル化
+
+### 3. 質問して動作確認
+
+- 「LA時代の辛かった記憶は？」
+- 「5歳の頃のこと覚えてる？」
+
+## 実装コード
+
+実際に使ったコードはこんな感じです（簡略版）：
+
+```python
+from langchain.vectorstores import Chroma
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.chains import RetrievalQA
+from langchain.chat_models import ChatOpenAI
+from langchain.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# 1. 牡丹の日記を読み込み
+loader = TextLoader("botan_diaries.txt", encoding="utf-8")
+documents = loader.load()
+
+# 2. テキストを適切なサイズに分割
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50
+)
+splits = text_splitter.split_documents(documents)
+
+# 3. ベクトルDB構築
+vectorstore = Chroma.from_documents(
+    documents=splits,
+    embedding=OpenAIEmbedings()
+)
+
+# 4. QAチェーン構築
+qa_chain = RetrievalQA.from_chain_type(
+    llm=ChatOpenAI(model="gpt-3.5-turbo"),
+    retriever=vectorstore.as_retriever(search_kwargs={"k": 3})
+)
+
+# 5. 質問
+response = qa_chain.run("LA時代の辛かった記憶は？")
+print(response)
+```
+
+### ポイント
+
+1. **簡単な実装**: LangChainのおかげで約30行で実装できる
+2. **chunk_size**: 500文字ごとに分割（日記1件が1チャンクに相当）
+3. **search_kwargs={"k": 3}**: 類似度上位3件を取得
+
+## 初回の印象
+
+最初は「おお、動いた！」と感動しました。
+
+- ✅ 質問すると、関連する日記が検索される
+- ✅ LLMが自然に回答してくれる
+- ✅ 実装も簡単で、ドキュメントも豊富
+
+「これで記憶システムは完成だ！」と思いました。
+
+しかし、実際に使い込んでいくうちに、いくつかの問題に気づき始めました。
+
+---
+
+# うまくいかなかった3つの理由
+
+RAGを使ってみて、AI VTuberの記憶システムとしては**3つの大きな課題**があることがわかりました。
+
+## 1. 主観性の欠如
+
+**一番大きな問題は、記憶が「客観的」になってしまうことでした。**
+
+### ❌ RAGで保存したテキスト（三人称・客観的）
+
+```
+牡丹は5歳の時、英語テストに失敗して泣いた。
+お姉ちゃんのKashoが励ましてくれた。
+```
+
+これは**三人称**の客観的な記述です。
+
+### ✅ AI VTuberが語るべき記憶（一人称・主観的）
+
+```
+今日、英語テストで全然できなくて、マジで泣いちゃった。
+周りの子はスラスラ答えてるのに、私だけわかんない。
+悔しい...私ってバカなのかな...
+
+でも、お姉ちゃんが「大丈夫だよ」って言ってくれて、
+ちょっと救われた。負けたくない。絶対に負けたくない！
+```
+
+**一人称で、感情を込めて、リアルに語る記憶。**これが欲しかったのです。
+
+### なぜこれが問題なのか
+
+| 観点 | 客観的記憶（RAG） | 主観的記憶（欲しいもの） |
+|------|-----------------|----------------------|
+| **視点** | 三人称 | 一人称 |
+| **感情** | 説明的 | 感情的 |
+| **個性** | 失われる | キャラクターらしさが出る |
+| **没入感** | 低い | 高い |
+
+RAGでは、保存したテキストがそのまま検索されます。客観的な記述を保存すれば、客観的な記述が返ってきます。
+
+もちろん、最初から一人称で書いておくこともできますが、それでも次の問題があります。
+
+---
+
+## 2. 時系列の扱いにくさ
+
+RAGの検索は**ベクトル空間での類似度**に基づいています。
+
+### 複雑な条件の例
+
+```
+「5歳から7歳の間で、一番辛かった記憶は？」
+```
+
+この質問には2つの条件があります：
+- **構造的な条件**: 年齢が5〜7歳
+- **意味的な条件**: 「辛かった」という感情
+
+### RAGの得意・不得意
+
+| 条件タイプ | RAGの対応 | 説明 |
+|-----------|---------|------|
+| **意味的条件** | ✅ 得意 | ベクトル検索で「辛かった」を見つけられる |
+| **構造的条件** | ⚠️ 苦手 | メタデータフィルターが必要 |
+
+### メタデータフィルターの例
+
+もちろん、メタデータフィルターを使えば対応できます：
+
+```python
+# メタデータでフィルタリング
+results = vectorstore.similarity_search(
+    query="辛かった記憶",
+    filter={"age": {"$gte": 5, "$lte": 7}}  # 5歳以上7歳以下
+)
+```
+
+しかし、こうすると検索ロジックが複雑になります。さらに、複数の条件を組み合わせる（「LA時代」「感情が強い」「姉妹との関係」など）と、メタデータだけでは表現しきれなくなります。
+
+### SQLとの比較
+
+```sql
+-- SQLなら自然に書ける
+SELECT * FROM botan_memories
+WHERE age BETWEEN 5 AND 7
+  AND location = 'Los Angeles'
+  AND emotion_frustration > 7
+ORDER BY emotion_frustration DESC
+LIMIT 5;
+```
+
+時系列データは、やはり**SQLのような構造化クエリ**の方が扱いやすいと感じました。
+
+---
+
+## 3. 関係性の表現が難しい
+
+三姉妹プロジェクトでは、**同じイベントを3つの視点で記録したい**という要件がありました。
+
+### LA移住初日の例
+
+同じ「LA移住初日」というイベントを、3人が異なる視点で記憶しています：
+
+| キャラクター | 年齢 | 記憶 |
+|------------|------|------|
+| **牡丹** | 3歳 | 「怖かった。わからない。お姉ちゃんがいる。」 |
+| **Kasho** | 5歳 | 「長女として妹たちを守らなきゃ。でも怖い。」 |
+| **ユリ** | 1歳 | 「新しい場所。お姉様たち不安そう。でも一緒だから大丈夫。」 |
+
+**3つの記憶は「同じイベント」という関係性で結ばれています。**
+
+### RAGでの限界
+
+RAGでこれを表現するのは困難です：
+
+- ❌ ベクトル空間では「似ている」ドキュメントは見つけられる
+- ❌ しかし「同じイベントを別の視点で記録したもの」という明示的な関係性は持てない
+- ❌ 「牡丹の記憶」と「Kashoの記憶」の関連を検索できない
+
+### データベースなら
+
+データベースであれば、こんな風にテーブル設計できます：
+
+```sql
+CREATE TABLE sister_shared_events (
+    event_id INTEGER PRIMARY KEY,
+    event_name TEXT,  -- 'LA移住初日'
+    kasho_memory_id INTEGER,
+    botan_memory_id INTEGER,
+    yuri_memory_id INTEGER,
+    FOREIGN KEY (kasho_memory_id) REFERENCES kasho_memories(id),
+    FOREIGN KEY (botan_memory_id) REFERENCES botan_memories(id),
+    FOREIGN KEY (yuri_memory_id) REFERENCES yuri_memories(id)
+);
+```
+
+**関係性を明示的に記録できる。これはRAGにはない強みです。**
+
+---
+
+# RAG vs 構造化記憶：比較まとめ
+
+## RAGが適しているケース
+
+| ユースケース | 理由 |
+|------------|------|
+| **企業ドキュメント検索** | 大規模データ、意味検索が必要 |
+| **FAQ応答** | 曖昧な質問に対応、多様な言い回し |
+| **コード検索** | 意味的に類似したコードを探す |
+
+## RAGが不適切だったケース（AI VTuber記憶）
+
+| 要件 | RAGの課題 | 必要なもの |
+|------|---------|-----------|
+| **主観的記憶** | 客観的テキストになる | 一人称の感情的記憶 |
+| **時系列管理** | 構造的条件が苦手 | 年齢・日付での範囲検索 |
+| **関係性** | 明示的な関係を持てない | 姉妹間の相互作用記録 |
+
+---
+
+# まとめと次回予告
+
+## 本記事のまとめ
+
+RAGは素晴らしい技術ですが、AI VTuberの記憶システムとして使うには、以下の課題がありました：
+
+1. **主観性の欠如**: 一人称の記憶が作りにくい
+2. **時系列の扱いにくさ**: 構造的な条件（年齢範囲など）が苦手
+3. **関係性の表現**: 姉妹間の相互作用が記録できない
+
+これらの課題を解決するため、私は** 独自の記憶システム「記憶製造機」 **を設計・実装することにしました。
+
+## 次回予告：記憶製造機の設計
+
+次回の記事（第2弾）では、以下を解説します：
+
+- **SQLiteを使った構造化記憶の設計**
+- **主観的記憶（一人称）の自動生成**
+- **感情スコアの管理**
+- **三姉妹の関係性の記録**
+- ** 三層記憶システム（直接記憶・伝承記憶・推測記憶） **
+
+RAGとは全く異なるアプローチですが、AI VTuberの要件にはより適していると考えています。
+
+- [第2弾: 記憶製造機の設計](https://qiita.com/koshikawa-masato/items/b871051dd89dcafb1e5d)
+- [第3弾: ハイブリッドアプローチ](https://qiita.com/koshikawa-masato/items/aad0fb50ec712f670246)
+
+## 記憶システムシリーズの進行状況
+
+| 記事 | 内容 | 状態 |
+|------|------|------|
+| **第1弾** | **RAGを試して気づいたこと** | ✅ 本記事 |
+| 第2弾 | 記憶製造機の設計（構造化記憶） | ✅ [公開済み](https://qiita.com/koshikawa-masato/items/b871051dd89dcafb1e5d) |
+| 第3弾 | ハイブリッドアプローチ（RAG + 構造化） | ✅ [公開済み](https://qiita.com/koshikawa-masato/items/aad0fb50ec712f670246) |
+
+---
+
+## 参考リンク
+
+### 本プロジェクトの技術記事（Phase 1-5）
+
+- [Phase 1: LangSmithマルチプロバイダートレーシング](https://qiita.com/koshikawa-masato/items/bb95295630c647eb5632)
+- [Phase 2: VLM実装ガイド](https://qiita.com/koshikawa-masato/items/fd684b963bad149d3ddc)
+- [Phase 3: LLM as a Judge実装ガイド](https://qiita.com/koshikawa-masato/items/c105b84f46f143560999)
+- [Phase 4: 三姉妹討論システム](https://qiita.com/koshikawa-masato/items/02bdbaa005949ff8cbde)
+- [Phase 5: センシティブ判定システム](https://qiita.com/koshikawa-masato/items/2bf3e024325176d3400a)
+
+### 外部資料
+
+- [LangChain公式ドキュメント](https://python.langchain.com/)
+- [RAGとは何か - AWS解説](https://aws.amazon.com/what-is/retrieval-augmented-generation/)
+- [Chroma - ベクトルDB](https://www.trychroma.com/)
