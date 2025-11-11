@@ -16,10 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class DynamicSensitiveDetector:
-    """動的センシティブ検出システム（Layer 3）
+    """動的センシティブ検出システム（Layer 3）- 補助的な検出機構
 
     WebSearchを使って未知の単語の危険度をリアルタイム判定し、
     DBに自動登録して継続的に学習する
+
+    重要な位置づけ:
+    - Layer 3 は補助的な役割（Layer 4 が最終防壁）
+    - WebSearch による誤検知は Layer 4（LLM文脈判定）で補正される
+    - 主目的は Layer 1 の DB 拡充（継続学習）
+    - 検索クエリにセンシティブキーワードを含めるため、検索バイアスが存在する
     """
 
     def __init__(
@@ -98,7 +104,12 @@ class DynamicSensitiveDetector:
             return []
 
     def check_word_sensitivity(self, word: str) -> Optional[Dict]:
-        """単語のセンシティブ度をWebSearchで判定
+        """単語のセンシティブ度をWebSearchで判定（補助的な検出）
+
+        重要: この手法は補助的な役割を持つ
+        - Layer 4（LLM文脈判定）が最終防壁として機能する前提
+        - WebSearchによる誤検知は Layer 4 で補正される
+        - 主目的は Layer 1 のDB拡充（継続学習）
 
         Args:
             word: チェック対象単語
@@ -121,6 +132,11 @@ class DynamicSensitiveDetector:
         logger.info(f"Checking word sensitivity via WebSearch: {word}")
 
         # WebSearchクエリを構築
+        # 注意: センシティブキーワードを含めた検索を行うため、検索バイアスが存在する
+        # この手法の限界:
+        #   1. 検索エンジンが強引に関連記事を探してしまう（False Positive のリスク）
+        #   2. 無関係なワードでもセンシティブと誤判定される可能性
+        #   3. Layer 4（LLM判定）での補正を前提とした設計
         queries = [
             f"{word} セクハラ VTuber",
             f"{word} 不適切 配信",
