@@ -145,6 +145,56 @@ class SerpApiClient:
         else:
             logger.info("No cache to clear (optimizer disabled)")
 
+    def get_account_info(self) -> Optional[Dict]:
+        """SerpApi Account情報を取得（正確な使用量）
+
+        Returns:
+            {
+                "account_email": "メールアドレス",
+                "api_key": "APIキー",
+                "plan_id": "プランID",
+                "plan_name": "プラン名",
+                "searches_per_month": 月間検索上限,
+                "plan_searches_left": プラン内残り検索数,
+                "this_month_usage": 今月の使用量,
+                "total_searches_left": 総残り検索数,
+                "extra_credits": 追加クレジット
+            }
+            エラー時: None
+        """
+        if not self.api_key:
+            logger.error("SerpApi API key not configured")
+            return None
+
+        try:
+            account_endpoint = "https://serpapi.com/account"
+            params = {"api_key": self.api_key}
+
+            logger.info("Fetching SerpApi account information...")
+
+            response = requests.get(account_endpoint, params=params, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info("SerpApi account info retrieved successfully")
+            return data
+
+        except requests.exceptions.Timeout:
+            logger.error("SerpApi account API timeout")
+            return None
+
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"SerpApi account API HTTP error: {e.response.status_code}")
+            return None
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"SerpApi account API request error: {e}")
+            return None
+
+        except Exception as e:
+            logger.error(f"SerpApi account API unexpected error: {e}")
+            return None
+
     def get_cache_stats(self) -> Dict:
         """キャッシュ統計を取得
 

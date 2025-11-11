@@ -72,15 +72,11 @@ class WebSearchOptimizer:
                 )
             """)
 
-            # 使用量トラッキングテーブル
+            # 日次API呼び出し数トラッキング（シンプル）
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS usage_tracking (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_text TEXT NOT NULL,
-                    normalized_query TEXT NOT NULL,
-                    searched_at TEXT NOT NULL,
-                    year_month TEXT NOT NULL,
-                    cache_hit INTEGER DEFAULT 0
+                CREATE TABLE IF NOT EXISTS daily_api_calls (
+                    date TEXT PRIMARY KEY,
+                    call_count INTEGER DEFAULT 0
                 )
             """)
 
@@ -88,11 +84,6 @@ class WebSearchOptimizer:
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_cache_expires
                 ON search_cache(expires_at)
-            """)
-
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_usage_year_month
-                ON usage_tracking(year_month)
             """)
 
             conn.commit()
@@ -168,9 +159,6 @@ class WebSearchOptimizer:
 
                 conn.commit()
 
-                # 使用量トラッキング（キャッシュヒット）
-                self._track_usage(query, normalized, cache_hit=True)
-
                 logger.info(f"Cache HIT: '{query}' (hits: {hit_count + 1}, expires: {expires_at})")
                 conn.close()
                 return result
@@ -216,43 +204,37 @@ class WebSearchOptimizer:
             conn.commit()
             conn.close()
 
-            # 使用量トラッキング（API呼び出し）
-            self._track_usage(query, normalized, cache_hit=False)
+            # 日次API呼び出し数をインクリメント
+            self._increment_daily_api_call()
 
             logger.info(f"Cache SAVED: '{query}' (expires: {expires_at.strftime('%Y-%m-%d %H:%M')})")
 
         except Exception as e:
             logger.error(f"Failed to save to cache: {e}")
 
-    def _track_usage(self, query: str, normalized: str, cache_hit: bool):
-        """使用量をトラッキング
-
-        Args:
-            query: 元のクエリ
-            normalized: 正規化クエリ
-            cache_hit: キャッシュヒットかどうか
-        """
+    def _increment_daily_api_call(self):
+        """日次API呼び出し数をインクリメント（シンプルなトラッキング）"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            now = datetime.now()
-            year_month = now.strftime("%Y-%m")
+            today = datetime.now().strftime("%Y-%m-%d")
 
+            # 今日のレコードがあれば +1、なければ作成
             cursor.execute("""
-                INSERT INTO usage_tracking
-                (query_text, normalized_query, searched_at, year_month, cache_hit)
-                VALUES (?, ?, ?, ?, ?)
-            """, (query, normalized, now.isoformat(), year_month, 1 if cache_hit else 0))
+                INSERT INTO daily_api_calls (date, call_count)
+                VALUES (?, 1)
+                ON CONFLICT(date) DO UPDATE SET call_count = call_count + 1
+            """, (today,))
 
             conn.commit()
             conn.close()
 
         except Exception as e:
-            logger.error(f"Failed to track usage: {e}")
+            logger.error(f"Failed to increment daily API call: {e}")
 
     def get_daily_usage(self, date: Optional[str] = None) -> Dict:
-        """日次使用量を取得
+        """日次使用量を取得（シンプル版）
 
         Args:
             date: 取得する日付（YYYY-MM-DD）、Noneなら今日
@@ -260,10 +242,7 @@ class WebSearchOptimizer:
         Returns:
             {
                 "date": "2025-11-11",
-                "total_queries": 12,
                 "api_calls": 5,
-                "cache_hits": 7,
-                "cache_hit_rate": 0.58,
                 "remaining": 3
             }
         """
@@ -274,33 +253,22 @@ class WebSearchOptimizer:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # 総クエリ数
+            # 今日のAPI呼び出し数
             cursor.execute("""
-                SELECT COUNT(*) FROM usage_tracking
-                WHERE DATE(searched_at) = ?
+                SELECT call_count FROM daily_api_calls
+                WHERE date = ?
             """, (date,))
-            total_queries = cursor.fetchone()[0]
 
-            # API呼び出し数（キャッシュミス）
-            cursor.execute("""
-                SELECT COUNT(*) FROM usage_tracking
-                WHERE DATE(searched_at) = ? AND cache_hit = 0
-            """, (date,))
-            api_calls = cursor.fetchone()[0]
+            row = cursor.fetchone()
+            api_calls = row[0] if row else 0
 
-            # キャッシュヒット数
-            cache_hits = total_queries - api_calls
-            cache_hit_rate = cache_hits / total_queries if total_queries > 0 else 0
             remaining = self.daily_limit - api_calls
 
             conn.close()
 
             return {
                 "date": date,
-                "total_queries": total_queries,
                 "api_calls": api_calls,
-                "cache_hits": cache_hits,
-                "cache_hit_rate": cache_hit_rate,
                 "remaining": remaining
             }
 
@@ -308,10 +276,7 @@ class WebSearchOptimizer:
             logger.error(f"Failed to get daily usage: {e}")
             return {
                 "date": date,
-                "total_queries": 0,
                 "api_calls": 0,
-                "cache_hits": 0,
-                "cache_hit_rate": 0.0,
                 "remaining": self.daily_limit
             }
 
