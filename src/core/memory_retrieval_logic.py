@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 import re
 
-from personality_core import PersonalityCore, BotanPersonality, KashoPersonality, YuriPersonality
+from .personality_core import PersonalityCore, BotanPersonality, KashoPersonality, YuriPersonality
 
 
 @dataclass

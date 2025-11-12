@@ -318,7 +318,11 @@ AI-Vtuber-Project/
 │   └── phase5_sensitive_check.md    # Phase 5: センシティブ判定
 │
 ├── scripts/                          # 運用スクリプト
-├── prompts/                          # プロンプト
+├── prompts/                          # プロンプト（ローカルのみ、Git追跡除外）
+│   ├── worldview_rules.txt           # 世界観ルール（三姉妹共通）
+│   ├── botan_base_prompt.txt         # 牡丹の性格プロンプト
+│   ├── kasho_base_prompt.txt         # Kashoの性格プロンプト
+│   └── yuri_base_prompt.txt          # ユリの性格プロンプト
 ├── personalities/                    # 性格パラメータ
 ├── sensitive_system/                 # センシティブ判定システム
 │   └── modules/                      # センシティブモジュール
@@ -383,6 +387,20 @@ sqlite3 sisters_memory.db < sisters_memory_schema.sql
 # サンプルデータを投入（オプション）
 python tools/create_phase_d_database.py
 ```
+
+### 5. プロンプトファイルのセットアップ
+
+**重要**: プロンプトはプロジェクトの魂であり、プロンプトエンジニアリングの財産です。
+リポジトリには含まれていないため、以下の構成でローカルに作成してください。
+
+```bash
+mkdir -p prompts
+```
+
+- `prompts/worldview_rules.txt` - 三姉妹共通の世界観ルール（ここに世界観を記載）
+- `prompts/botan_base_prompt.txt` - 牡丹の性格・口調（ここに牡丹の性格を記載）
+- `prompts/kasho_base_prompt.txt` - Kashoの性格・口調（ここにKashoの性格を記載）
+- `prompts/yuri_base_prompt.txt` - ユリの性格・口調（ここにユリの性格を記載）
 
 ---
 
@@ -460,10 +478,10 @@ python apps/copy_robot_viewer.py
 
 ### 公開しない情報
 
+- **プロンプト**（prompts/）- 三姉妹の世界観・性格、プロジェクトの魂
 - **sisters_memory.dbの内容**（三姉妹の個人的な記憶）
 - **APIキー**（.envファイル）
 - **バックアップファイル**（backup/）
-- **日記**（kirinuki/*/日記/）
 
 ### 公開する情報
 
