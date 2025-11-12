@@ -482,7 +482,6 @@ python apps/copy_robot_viewer.py
 - **sisters_memory.dbの内容**（三姉妹の個人的な記憶）
 - **APIキー**（.envファイル）
 - **バックアップファイル**（backup/）
-- **日記**（kirinuki/*/日記/）
 
 ### 公開する情報
 
