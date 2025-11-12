@@ -24,9 +24,11 @@ from rich import box
 # Add parent directory to path
 # Get absolute path of this script
 script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent
 # Insert sensitive_system first, then youtube_learning_system
-sys.path.insert(0, str(script_dir.parent / "youtube_learning_system"))
+sys.path.insert(0, str(project_root / "youtube_learning_system"))
 sys.path.insert(0, str(script_dir))
+sys.path.insert(0, str(project_root))
 
 # Debug: Print sys.path
 if os.getenv('DEBUG'):
@@ -37,6 +39,8 @@ try:
     from core.filter import Layer1PreFilter
     from response.character_specific import CharacterSpecificResponse
     from conversation import InterestAnalyzer
+    from src.line_bot.worldview_checker import WorldviewChecker
+    from src.core.prompt_manager import PromptManager
 except ImportError as e:
     print(f"[ERROR] Import failed: {e}")
     print(f"[ERROR] Current directory: {os.getcwd()}")
@@ -327,9 +331,13 @@ class CopyRobotChat:
         self.interest_analyzer = InterestAnalyzer()
         self.last_responder = None  # Track last responder for context continuation
 
-        # Load production prompts from shared template files (symbolic link approach)
-        # These files are the single source of truth, shared with chat_with_*_memories.py
-        self.base_prompts = self._load_prompt_templates()
+        # Layer 5: WorldviewChecker
+        self.worldview_checker = WorldviewChecker()
+        self.console.print("[green]✓ Layer 5: WorldviewChecker初期化完了[/green]")
+
+        # 統一プロンプト管理システム
+        self.prompt_manager = PromptManager()
+        self.console.print("[green]✓ 統一PromptManager初期化完了[/green]")
 
         # Setup chat log file
         self.log_file = None
@@ -337,38 +345,6 @@ class CopyRobotChat:
 
         self._show_welcome()
         self._check_ollama_model()
-
-    def _load_prompt_templates(self) -> Dict[str, str]:
-        """
-        Load character prompt templates from shared files (symbolic link approach)
-
-        These files are the single source of truth, shared with production:
-        - chat_with_botan_memories.py
-        - chat_with_kasho_memories.py
-        - chat_with_yuri_memories.py
-
-        Returns:
-            Dict of {character: prompt_template}
-        """
-        prompts_dir = Path(__file__).parent.parent / "prompts"
-        prompt_files = {
-            'botan': prompts_dir / "botan_base_prompt.txt",
-            'kasho': prompts_dir / "kasho_base_prompt.txt",
-            'yuri': prompts_dir / "yuri_base_prompt.txt"
-        }
-
-        prompts = {}
-        for character, filepath in prompt_files.items():
-            try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    prompts[character] = f.read()
-            except FileNotFoundError:
-                self.console.print(f"[red]✗ プロンプトファイルが見つかりません: {filepath}[/red]")
-                self.console.print("[yellow]フォールバックプロンプトを使用します[/yellow]")
-                # Fallback to a simple prompt
-                prompts[character] = f"あなたは{character}です。"
-
-        return prompts
 
     def _show_welcome(self):
         """
@@ -579,8 +555,8 @@ class CopyRobotChat:
         Returns:
             システムプロンプト
         """
-        # Get base prompt from template file
-        base_prompt = self.base_prompts[character]
+        # 統一プロンプト管理システムから取得
+        base_prompt = self.prompt_manager.get_combined_prompt(character)
 
         # Build memory section
         memory_section = ""
@@ -762,14 +738,26 @@ class CopyRobotChat:
         # Call LLM with character-specific parameters (history included)
         response = self.call_ollama(system_prompt, character)
 
-        # Extract response without timing info for history
+        # Extract response without timing info for Layer 5 check
         # Response format: "text (XX.XXXs)"
         import re
         timing_match = re.search(r'\s+\([\d.]+s\)$', response)
         if timing_match:
             response_without_timing = response[:timing_match.start()]
+            timing_info = response[timing_match.start():]
         else:
             response_without_timing = response
+            timing_info = ""
+
+        # Layer 5: 世界観整合性チェック
+        worldview_check = self.worldview_checker.check_response(response_without_timing)
+
+        if not worldview_check["is_valid"]:
+            # メタ用語検出：フォールバック応答に置き換え
+            fallback_response = self.worldview_checker.get_fallback_response(character)
+            self.console.print(f"[yellow]⚠ Layer 5: 世界観違反検出 - {worldview_check['reason']}[/yellow]")
+            self.console.print(f"[yellow]  検出用語: {worldview_check['detected_terms'][:3]}[/yellow]")
+            response_without_timing = fallback_response
 
         # Add assistant response to conversation history
         self.history[character].append({
@@ -777,7 +765,8 @@ class CopyRobotChat:
             "content": response_without_timing
         })
 
-        return response
+        # Return with timing info
+        return response_without_timing + timing_info
 
     def _handle_low_interest_case(
         self,
