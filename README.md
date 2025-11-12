@@ -478,6 +478,7 @@ python apps/copy_robot_viewer.py
 
 ### 公開しない情報
 
+- **プロンプト**（prompts/）- 三姉妹の世界観・性格、プロジェクトの魂
 - **sisters_memory.dbの内容**（三姉妹の個人的な記憶）
 - **APIキー**（.envファイル）
 - **バックアップファイル**（backup/）
