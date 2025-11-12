@@ -223,6 +223,34 @@ def send_line_reply(reply_token: str, message: str, character: str = "botan") ->
         return False
 
 
+def get_image_content(message_id: str) -> Optional[bytes]:
+    """LINE Messaging APIから画像コンテンツを取得
+
+    Args:
+        message_id: メッセージID
+
+    Returns:
+        画像バイナリデータ、取得失敗時はNone
+    """
+    if MOCK_MODE:
+        logger.info(f"モックモード: 画像取得をスキップ (message_id={message_id})")
+        return None
+
+    url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
+    headers = {
+        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        logger.info(f"画像取得成功: message_id={message_id}, size={len(response.content)} bytes")
+        return response.content
+    except requests.exceptions.RequestException as e:
+        logger.error(f"画像取得エラー: {e}")
+        return None
+
+
 # ========================================
 # 署名検証
 # ========================================
@@ -303,9 +331,15 @@ async def webhook(
     for event in webhook_request.events:
         logger.info(f"イベント受信: type={event.type}, source={event.source.type}")
 
-        if event.type == "message" and event.message and event.message.type == "text":
-            # テキストメッセージ処理
-            await handle_text_message(event)
+        if event.type == "message" and event.message:
+            if event.message.type == "text":
+                # テキストメッセージ処理
+                await handle_text_message(event)
+            elif event.message.type == "image":
+                # 画像メッセージ処理（VLM統合）
+                await handle_image_message(event)
+            else:
+                logger.info(f"未対応メッセージタイプ: {event.message.type}")
         elif event.type == "follow":
             # 友だち追加処理
             await handle_follow(event)
@@ -531,6 +565,85 @@ async def handle_text_message(event):
             response_text = "ごめんなさい、エラーが発生しました..."
 
     # LINE Messaging APIで返信（キャラクター情報付き）
+    send_line_reply(reply_token, response_text, character)
+
+
+async def handle_image_message(event):
+    """画像メッセージ処理（VLM統合）
+
+    Args:
+        event: LINE Webhookイベント
+    """
+    user_id = event.source.userId
+    message_id = event.message.id
+    reply_token = event.replyToken
+
+    logger.info(f"画像メッセージ: user_id={user_id}, message_id={message_id}")
+
+    # セッションから選択中のキャラクターを取得
+    session = session_manager.get_session(user_id)
+    character = session.get("selected_character", "botan")
+
+    # 画像コンテンツを取得
+    image_data = get_image_content(message_id)
+
+    if not image_data:
+        error_message = "ごめんね、画像が取得できなかったよ...💦"
+        send_line_reply(reply_token, error_message, character)
+        return
+
+    # 画像をbase64エンコード
+    import base64
+    base64_image = base64.b64encode(image_data).decode('utf-8')
+
+    # MIME type判定（簡易版、LINEは主にJPEG）
+    mime_type = "image/jpeg"
+    image_url = f"data:{mime_type};base64,{base64_image}"
+
+    try:
+        # VLM処理（ConversationHandlerを使用）
+        if USE_REAL_LLM and hasattr(conversation_handler, 'generate_with_image'):
+            result = conversation_handler.generate_with_image(
+                image_url=image_url,
+                user_message="（画像を送信しました）",
+                character=character,
+                user_id=user_id,
+                metadata={
+                    "reply_token": reply_token,
+                    "event_type": "image",
+                    "source_type": event.source.type,
+                    "message_id": message_id
+                }
+            )
+
+            response_text = result.get("response", "")
+
+            # エラーチェック
+            if "error" in result:
+                logger.error(f"VLM生成エラー: {result['error']}")
+                response_text = "ごめんね、画像がうまく見られなかった...💦"
+
+            logger.info(f"VLM応答生成成功: latency={result.get('latency_ms', 0):.0f}ms")
+
+            # Layer 5: 世界観整合性チェック結果
+            if result.get('worldview_replaced', False):
+                worldview_check = result.get('worldview_check', {})
+                logger.warning(
+                    f"Layer 5: 世界観違反応答を置き換え - "
+                    f"検出用語: {worldview_check.get('detected_terms', [])[:3]}, "
+                    f"理由: {worldview_check.get('reason', '')}"
+                )
+
+        else:
+            # モックモードまたはVLM未対応
+            response_text = "（モックモード）画像を受け取りました！"
+            logger.info("モックモード: VLM処理をスキップ")
+
+    except Exception as e:
+        logger.error(f"VLM処理エラー: {e}")
+        response_text = "ごめんね、画像がうまく処理できなかった...💦"
+
+    # LINE Messaging APIで返信
     send_line_reply(reply_token, response_text, character)
 
 
