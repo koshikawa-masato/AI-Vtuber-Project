@@ -12,6 +12,7 @@ import json
 import os
 import time
 import csv
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -51,6 +52,9 @@ except ImportError as e:
     print(f"  cd {script_dir}")
     print(f"  python3 {Path(__file__).name} <args>")
     sys.exit(1)
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 
 class CopyRobotMemoryLoader:
@@ -603,10 +607,13 @@ class CopyRobotChat:
             response = result.get("response", "")
 
             # Layer 5: 世界観チェック
-            checked_response = self.worldview_checker.check_and_fix(
-                response=response,
-                character=character
-            )
+            check_result = self.worldview_checker.check_response(response)
+            if check_result["is_valid"]:
+                checked_response = response
+            else:
+                # 世界観違反の場合、フォールバック応答を使用
+                logger.warning(f"VLM応答が世界観違反: {check_result['reason']}")
+                checked_response = self.worldview_checker.get_fallback_response(character)
 
             return checked_response
 
