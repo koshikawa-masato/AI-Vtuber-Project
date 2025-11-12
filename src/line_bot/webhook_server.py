@@ -28,6 +28,7 @@ from .sensitive_handler_v2 import SensitiveHandler, SimpleMockSensitiveHandler
 from .integrated_sensitive_detector import IntegratedSensitiveDetector
 from .session_manager import SessionManager, SimpleMockSessionManager
 from .websearch_client import WebSearchClient, MockWebSearchClient, GoogleSearchClient, SerpApiClient
+from .sticker_analyzer import StickerAnalyzer
 from src.core.llm_ollama import OllamaProvider
 
 # ロギング設定
@@ -80,8 +81,16 @@ if USE_REAL_LLM:
         enable_memory=ENABLE_MEMORY
     )
     logger.info(f"Phase 1統合: ConversationHandler初期化完了（実LLM, Memory={ENABLE_MEMORY}）")
+
+    # スタンプVLM解析
+    sticker_analyzer = StickerAnalyzer(
+        llm=conversation_handler.llm,
+        cache_db_path="/home/koshikawa/AI-Vtuber-Project/src/line_bot/database/sticker_cache.db"
+    )
+    logger.info("Phase 2統合: StickerAnalyzer初期化完了（VLM + Cache）")
 else:
     conversation_handler = SimpleMockHandler()
+    sticker_analyzer = None
     logger.info("Phase 1統合: SimpleMockHandler初期化完了（モック）")
 
 # Phase 5統合: WebSearch統合
@@ -338,6 +347,9 @@ async def webhook(
             elif event.message.type == "image":
                 # 画像メッセージ処理（VLM統合）
                 await handle_image_message(event)
+            elif event.message.type == "sticker":
+                # スタンプメッセージ処理
+                await handle_sticker_message(event)
             else:
                 logger.info(f"未対応メッセージタイプ: {event.message.type}")
         elif event.type == "follow":
@@ -569,7 +581,7 @@ async def handle_text_message(event):
 
 
 async def handle_image_message(event):
-    """画像メッセージ処理（VLM統合）
+    """画像メッセージ処理（現在は準備中）
 
     Args:
         event: LINE Webhookイベント
@@ -578,70 +590,49 @@ async def handle_image_message(event):
     message_id = event.message.id
     reply_token = event.replyToken
 
-    logger.info(f"画像メッセージ: user_id={user_id}, message_id={message_id}")
+    logger.info(f"画像メッセージ: user_id={user_id}, message_id={message_id} (準備中メッセージを返信)")
 
     # セッションから選択中のキャラクターを取得
     session = session_manager.get_session(user_id)
     character = session.get("selected_character", "botan")
 
-    # 画像コンテンツを取得
-    image_data = get_image_content(message_id)
+    # 三姉妹別の準備中メッセージ
+    preparation_messages = {
+        "botan": "画像とかスタンプも見れるようになりたいんだけど、まだ準備中なんだ〜！テキストで話しかけてね♪",
+        "kasho": "画像やスタンプの処理機能は現在開発中です。テキストメッセージでお話ししましょう。",
+        "yuri": "うーん、画像はまだ見れないんだよね...テキストで話してくれると嬉しいな。"
+    }
+    response_text = preparation_messages.get(character, preparation_messages["botan"])
 
-    if not image_data:
-        error_message = "ごめんね、画像が取得できなかったよ...💦"
-        send_line_reply(reply_token, error_message, character)
-        return
+    # LINE Messaging APIで返信
+    send_line_reply(reply_token, response_text, character)
 
-    # 画像をbase64エンコード
-    import base64
-    base64_image = base64.b64encode(image_data).decode('utf-8')
 
-    # MIME type判定（簡易版、LINEは主にJPEG）
-    mime_type = "image/jpeg"
-    image_url = f"data:{mime_type};base64,{base64_image}"
+async def handle_sticker_message(event):
+    """スタンプメッセージ処理（現在は準備中）
 
-    try:
-        # VLM処理（ConversationHandlerを使用）
-        if USE_REAL_LLM and hasattr(conversation_handler, 'generate_with_image'):
-            result = conversation_handler.generate_with_image(
-                image_url=image_url,
-                user_message="（画像を送信しました）",
-                character=character,
-                user_id=user_id,
-                metadata={
-                    "reply_token": reply_token,
-                    "event_type": "image",
-                    "source_type": event.source.type,
-                    "message_id": message_id
-                }
-            )
+    Args:
+        event: LINE Webhookイベント
+    """
+    user_id = event.source.userId
+    reply_token = event.replyToken
+    package_id = event.message.packageId
+    sticker_id = event.message.stickerId
+    sticker_type = event.message.stickerResourceType or "UNKNOWN"
 
-            response_text = result.get("response", "")
+    logger.info(f"スタンプ受信: user_id={user_id}, packageId={package_id}, stickerId={sticker_id}, type={sticker_type} (準備中メッセージを返信)")
 
-            # エラーチェック
-            if "error" in result:
-                logger.error(f"VLM生成エラー: {result['error']}")
-                response_text = "ごめんね、画像がうまく見られなかった...💦"
+    # セッションからキャラクター取得
+    session = session_manager.get_session(user_id)
+    character = session.get("selected_character", "botan")
 
-            logger.info(f"VLM応答生成成功: latency={result.get('latency_ms', 0):.0f}ms")
-
-            # Layer 5: 世界観整合性チェック結果
-            if result.get('worldview_replaced', False):
-                worldview_check = result.get('worldview_check', {})
-                logger.warning(
-                    f"Layer 5: 世界観違反応答を置き換え - "
-                    f"検出用語: {worldview_check.get('detected_terms', [])[:3]}, "
-                    f"理由: {worldview_check.get('reason', '')}"
-                )
-
-        else:
-            # モックモードまたはVLM未対応
-            response_text = "（モックモード）画像を受け取りました！"
-            logger.info("モックモード: VLM処理をスキップ")
-
-    except Exception as e:
-        logger.error(f"VLM処理エラー: {e}")
-        response_text = "ごめんね、画像がうまく処理できなかった...💦"
+    # 三姉妹別の準備中メッセージ
+    preparation_messages = {
+        "botan": "スタンプありがと〜！でもまだスタンプには反応できないんだ...テキストで話しかけてね♪",
+        "kasho": "スタンプありがとう。でも、スタンプの処理機能は現在開発中なの。テキストでお話ししましょう。",
+        "yuri": "スタンプ可愛いね...でもまだ認識できないんだ。テキストで話してくれると嬉しいな。"
+    }
+    response_text = preparation_messages.get(character, preparation_messages["botan"])
 
     # LINE Messaging APIで返信
     send_line_reply(reply_token, response_text, character)

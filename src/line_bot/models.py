@@ -25,7 +25,10 @@ class Message(BaseModel):
     id: str
     type: Literal["text", "image", "video", "audio", "file", "location", "sticker"]
     text: Optional[str] = None  # type="text"の場合
-    # その他のメッセージタイプのフィールドは必要に応じて追加
+    # スタンプメッセージ用フィールド (type="sticker"の場合)
+    packageId: Optional[str] = None
+    stickerId: Optional[str] = None
+    stickerResourceType: Optional[Literal["STATIC", "ANIMATION", "SOUND", "ANIMATION_SOUND", "POPUP"]] = None
 
 
 class Postback(BaseModel):
