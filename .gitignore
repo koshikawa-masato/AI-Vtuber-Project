@@ -54,6 +54,9 @@ temp/
 
 # === Botan Project Specific ===
 
+# Internal prompts (PRIVATE - DO NOT PUBLISH)
+prompts/
+
 # Copy robot execution results
 copy_robots/
 

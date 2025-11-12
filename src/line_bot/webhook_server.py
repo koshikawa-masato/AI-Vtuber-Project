@@ -65,16 +65,21 @@ else:
     logger.info(f"   Channel Secret: {'設定済み' if CHANNEL_SECRET else '未設定'}")
     logger.info(f"   Access Token: {'設定済み' if CHANNEL_ACCESS_TOKEN else '未設定'}")
 
-# Phase 1統合: 会話ハンドラー初期化
+# Phase 1統合 + Phase D（記憶システム）: 会話ハンドラー初期化
 USE_REAL_LLM = os.getenv("LINE_USE_REAL_LLM", "false").lower() == "true"  # 環境変数から取得
+ENABLE_MEMORY = os.getenv("LINE_ENABLE_MEMORY", "true").lower() == "true"  # 記憶システム有効化
+MEMORY_DB_PATH = os.getenv("MEMORY_DB_PATH", "/home/koshikawa/toExecUnit/sisters_memory.db")
+
 if USE_REAL_LLM:
     conversation_handler = ConversationHandler(
         provider="ollama",
         model="qwen2.5:14b",
         ollama_url="http://localhost:11434",
-        project_name="botan-line-bot"
+        project_name="botan-line-bot",
+        db_path=MEMORY_DB_PATH,
+        enable_memory=ENABLE_MEMORY
     )
-    logger.info("Phase 1統合: ConversationHandler初期化完了（実LLM）")
+    logger.info(f"Phase 1統合: ConversationHandler初期化完了（実LLM, Memory={ENABLE_MEMORY}）")
 else:
     conversation_handler = SimpleMockHandler()
     logger.info("Phase 1統合: SimpleMockHandler初期化完了（モック）")
@@ -463,6 +468,15 @@ async def handle_text_message(event):
                 response_text = "ごめんなさい、うまく応答できませんでした..."
 
             logger.info(f"応答生成成功: latency={result.get('latency_ms', 0):.0f}ms, tokens={result.get('tokens', {}).get('total_tokens', 0)}")
+
+            # Layer 5: 世界観整合性チェック結果
+            if result.get('worldview_replaced', False):
+                worldview_check = result.get('worldview_check', {})
+                logger.warning(
+                    f"Layer 5: 世界観違反応答を置き換え - "
+                    f"検出用語: {worldview_check.get('detected_terms', [])[:3]}, "
+                    f"理由: {worldview_check.get('reason', '')}"
+                )
 
             # Phase 5統合: 生成された応答のセンシティブ判定
             response_check_result = _perform_sensitive_check(
