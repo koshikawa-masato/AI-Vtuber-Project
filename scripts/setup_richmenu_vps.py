@@ -7,8 +7,12 @@ VPS用リッチメニューセットアップスクリプト
 
 import os
 import sys
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
+
+# ログ設定
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
