@@ -378,7 +378,7 @@ async def startup_event():
     """起動時処理"""
     logger.info("=" * 60)
     logger.info("🚀 VPS LINE Bot起動")
-    logger.info(f"   LLM: gpt-4o-mini")
+    logger.info(f"   LLM: {VPS_LLM_PROVIDER}/{VPS_LLM_MODEL}")
     logger.info(f"   学習ログDB: {learning_log_system.db_path}")
     logger.info(f"   キャラクター: {', '.join(CHARACTERS.keys())}")
     logger.info("=" * 60)
