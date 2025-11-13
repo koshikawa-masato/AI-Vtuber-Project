@@ -1,5 +1,5 @@
 """
-クラウドLLMプロバイダー（OpenAI gpt-4o-mini対応）
+クラウドLLMプロバイダー（OpenAI, Gemini対応）
 
 VPS用: 高速・低コスト・30秒制約対応
 """
@@ -9,6 +9,7 @@ import logging
 from typing import Optional, Dict, Any
 from openai import OpenAI
 from dotenv import load_dotenv
+import google.generativeai as genai
 
 load_dotenv()
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class CloudLLMProvider:
-    """クラウドLLMプロバイダー（OpenAI gpt-4o-mini）"""
+    """クラウドLLMプロバイダー（OpenAI, Gemini対応）"""
 
     def __init__(
         self,
@@ -29,7 +30,7 @@ class CloudLLMProvider:
         初期化
 
         Args:
-            provider: LLMプロバイダー（"openai"）
+            provider: LLMプロバイダー（"openai", "gemini"）
             model: モデル名
             temperature: 温度パラメータ
             max_tokens: 最大トークン数
@@ -46,6 +47,16 @@ class CloudLLMProvider:
 
             self.client = OpenAI(api_key=api_key)
             logger.info(f"✅ OpenAI初期化完了: {model}")
+
+        elif provider == "gemini":
+            api_key = os.getenv("GOOGLE_API_KEY")
+            if not api_key:
+                raise ValueError("GOOGLE_API_KEY not found in environment variables")
+
+            genai.configure(api_key=api_key)
+            self.client = genai.GenerativeModel(model)
+            logger.info(f"✅ Gemini初期化完了: {model}")
+
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
@@ -67,31 +78,50 @@ class CloudLLMProvider:
             生成されたテキスト
         """
         try:
-            # メッセージ構築
-            messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
+            if self.provider == "openai":
+                # メッセージ構築
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
 
-            # OpenAI API呼び出し
-            response = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                temperature=self.temperature,
-                max_tokens=self.max_tokens
-            )
+                # OpenAI API呼び出し
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens
+                )
 
-            result = response.choices[0].message.content
+                result = response.choices[0].message.content
+
+            elif self.provider == "gemini":
+                # Geminiはsystem_promptとpromptを結合
+                full_prompt = f"{system_prompt}\n\nユーザー: {prompt}" if system_prompt else prompt
+
+                # Gemini API呼び出し
+                response = self.client.generate_content(
+                    full_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=self.temperature,
+                        max_output_tokens=self.max_tokens
+                    )
+                )
+
+                result = response.text
+
+            else:
+                raise ValueError(f"Unsupported provider: {self.provider}")
 
             # ログ記録
-            logger.info(f"✅ LLM生成成功: {len(result)}文字")
+            logger.info(f"✅ LLM生成成功 ({self.provider}): {len(result)}文字")
             if metadata:
                 logger.debug(f"   メタデータ: {metadata}")
 
             return result
 
         except Exception as e:
-            logger.error(f"❌ LLM生成エラー: {e}")
+            logger.error(f"❌ LLM生成エラー ({self.provider}): {e}")
             raise
 
     def generate_with_context(
@@ -125,7 +155,14 @@ class CloudLLMProvider:
         if memories:
             system_prompt += f"\n\n【記憶】\n{memories}\n"
 
-        system_prompt += "\n重要な指示：\n- 30秒以内に応答を完了してください\n- 簡潔で自然な会話を心がけてください"
+        system_prompt += """
+
+【最重要指示 - 厳守】
+1. 必ず100%日本語のみで応答してください
+2. 英語・中国語・ロシア語・その他の外国語は絶対に使わないでください
+3. 固有名詞（Disney、Emilyなど）以外は全て日本語で表現してください
+4. 30秒以内に応答を完了してください
+5. 簡潔で自然な会話を心がけてください"""
 
         return self.generate(
             prompt=user_message,

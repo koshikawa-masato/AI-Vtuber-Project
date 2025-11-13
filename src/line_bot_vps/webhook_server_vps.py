@@ -56,14 +56,17 @@ CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 if not CHANNEL_SECRET or not CHANNEL_ACCESS_TOKEN:
     logger.warning("⚠️ LINE認証情報が設定されていません")
 
-# クラウドLLM初期化
+# クラウドLLM初期化（環境変数から設定取得）
+VPS_LLM_PROVIDER = os.getenv("VPS_LLM_PROVIDER", "openai")
+VPS_LLM_MODEL = os.getenv("VPS_LLM_MODEL", "gpt-4o-mini")
+
 llm_provider = CloudLLMProvider(
-    provider="openai",
-    model="gpt-4o-mini",
+    provider=VPS_LLM_PROVIDER,
+    model=VPS_LLM_MODEL,
     temperature=0.7,
     max_tokens=500
 )
-logger.info("✅ CloudLLMProvider初期化完了（gpt-4o-mini）")
+logger.info(f"✅ CloudLLMProvider初期化完了（{VPS_LLM_PROVIDER}: {VPS_LLM_MODEL}）")
 
 # 学習ログシステム初期化
 learning_log_system = LearningLogSystem(
@@ -143,8 +146,8 @@ def generate_response(
     start_time = time.time()
 
     try:
-        # プロンプト取得
-        character_prompt = prompt_manager.get_character_prompt(character)
+        # プロンプト取得（世界観ルール + キャラクタープロンプト）
+        character_prompt = prompt_manager.get_combined_prompt(character)
 
         # TODO: Phase D記憶検索統合（copy_robot_memory.dbから）
         memories = None  # 将来的に実装
