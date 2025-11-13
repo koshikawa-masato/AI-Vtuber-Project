@@ -243,7 +243,8 @@ class RichMenuManager:
             logger.info(f"  - Image: {image_path}")
             return True
 
-        url = f"{self.base_url}/richmenu/{rich_menu_id}/content"
+        # 画像アップロードはapi-data.line.meを使用
+        url = f"https://api-data.line.me/v2/bot/richmenu/{rich_menu_id}/content"
         headers = {
             "Authorization": f"Bearer {self.channel_access_token}",
             "Content-Type": "image/png"
