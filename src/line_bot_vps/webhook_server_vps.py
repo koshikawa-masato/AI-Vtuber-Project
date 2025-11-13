@@ -24,6 +24,7 @@ load_dotenv()
 
 from .cloud_llm_provider import CloudLLMProvider
 from .learning_log_system import LearningLogSystem
+from .session_manager import SessionManager
 
 # 既存のモジュールを活用
 import sys
@@ -69,6 +70,10 @@ learning_log_system = LearningLogSystem(
     db_path=os.getenv("LEARNING_LOG_DB_PATH", "./learning_logs.db")
 )
 logger.info("✅ LearningLogSystem初期化完了")
+
+# セッション管理システム初期化
+session_manager = SessionManager()
+logger.info("✅ SessionManager初期化完了")
 
 # プロンプト管理システム初期化
 prompt_manager = PromptManager()
@@ -221,18 +226,11 @@ async def get_learning_logs(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/webhook/{character}")
-async def webhook(character: str, request: Request):
+@app.post("/webhook")
+async def webhook(request: Request):
     """
-    LINE Webhook エンドポイント
-
-    Args:
-        character: キャラクター名（kasho/botan/yuri）
+    LINE Webhook エンドポイント（単一・キャラクター選択対応）
     """
-    # キャラクター検証
-    if character not in CHARACTERS:
-        raise HTTPException(status_code=404, detail=f"Character '{character}' not found")
-
     # リクエストボディ取得
     body = await request.body()
     signature = request.headers.get("X-Line-Signature", "")
@@ -253,15 +251,53 @@ async def webhook(character: str, request: Request):
 
     for event in events:
         event_type = event.get("type")
+        user_id = event.get("source", {}).get("userId", "unknown")
+        reply_token = event.get("replyToken")
 
-        if event_type == "message":
+        # Postbackイベント処理（キャラクター選択）
+        if event_type == "postback":
+            postback_data = event.get("postback", {}).get("data", "")
+            logger.info(f"📲 Postback受信: {postback_data}")
+
+            # キャラクター選択処理
+            if postback_data.startswith("character="):
+                character = postback_data.split("=")[1]
+                if character in CHARACTERS:
+                    session_manager.set_character(user_id, character)
+
+                    # 確認メッセージを返信
+                    reply_message = f"✨ {CHARACTERS[character]['display_name']}を選択したよ！何でも聞いてね！"
+
+                    try:
+                        import requests
+                        reply_url = "https://api.line.me/v2/bot/message/reply"
+                        headers = {
+                            "Content-Type": "application/json",
+                            "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                        }
+                        payload = {
+                            "replyToken": reply_token,
+                            "messages": [{"type": "text", "text": reply_message}]
+                        }
+                        response = requests.post(reply_url, headers=headers, json=payload)
+
+                        if response.status_code == 200:
+                            logger.info(f"✅ キャラクター選択返信成功: {character}")
+                        else:
+                            logger.error(f"❌ 返信エラー: {response.status_code}")
+                    except Exception as e:
+                        logger.error(f"❌ LINE API呼び出しエラー: {e}")
+
+        # メッセージイベント処理
+        elif event_type == "message":
             message_type = event.get("message", {}).get("type")
 
             if message_type == "text":
                 # テキストメッセージ処理
                 user_message = event.get("message", {}).get("text", "")
-                user_id = event.get("source", {}).get("userId", "unknown")
-                reply_token = event.get("replyToken")
+
+                # SessionManagerからキャラクターを取得（デフォルト: 牡丹）
+                character = session_manager.get_character_or_default(user_id, default="botan")
 
                 logger.info(f"📩 メッセージ受信: {character} <- {user_message[:30]}...")
 
@@ -288,11 +324,15 @@ async def webhook(character: str, request: Request):
                         response_time=response_time,
                         metadata={
                             "platform": "LINE_VPS",
-                            "event_type": event_type
+                            "event_type": event_type,
+                            "character": character
                         }
                     )
                 except Exception as e:
                     logger.error(f"❌ 学習ログ保存エラー: {e}")
+
+                # 最終メッセージ時刻を更新
+                session_manager.update_last_message_time(user_id)
 
                 # LINE返信
                 try:
