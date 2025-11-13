@@ -10,8 +10,9 @@ import sqlite3
 import os
 from datetime import datetime
 
-# プロジェクトルート
-PROJECT_ROOT = "/home/koshikawa/AI-Vtuber-Project"
+# プロジェクトルート（スクリプトの親ディレクトリから自動取得）
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "copy_robot_memory.db")
 
 def create_database():
