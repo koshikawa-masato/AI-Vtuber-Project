@@ -1,24 +1,19 @@
 [Unit]
-Description=LINE Bot VPS Service (牡丹プロジェクト)
+Description=LINE Bot VPS Service
 After=network.target
+Wants=network.target
 
 [Service]
 Type=simple
 User=ubuntu
-Group=ubuntu
 WorkingDirectory=/home/ubuntu/AI-Vtuber-Project
-Environment="PATH=/home/ubuntu/AI-Vtuber-Project/venv/bin"
-ExecStart=/home/ubuntu/AI-Vtuber-Project/venv/bin/python3 -m uvicorn src.line_bot_vps.webhook_server_vps:app --host 0.0.0.0 --port 8000
+Environment="PATH=/home/ubuntu/AI-Vtuber-Project/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+EnvironmentFile=/home/ubuntu/AI-Vtuber-Project/.env
+ExecStart=/home/ubuntu/AI-Vtuber-Project/venv/bin/python -m uvicorn src.line_bot_vps.webhook_server_vps:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=10
-
-# ログ設定
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=line-bot-vps
-
-# リソース制限
-LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
