@@ -389,6 +389,76 @@ VTuberに憧れていて、社交的で負けず嫌い。
 
         return prompt
 
+    def generate_with_image(
+        self,
+        image_url: str,
+        user_message: str = "（画像を送信しました）",
+        character: str = "botan",
+        user_id: str = "unknown",
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        画像付きメッセージに対する応答生成（VLM統合）
+
+        Args:
+            image_url: 画像URL（data URI形式のbase64）
+            user_message: ユーザーメッセージ（省略可）
+            character: キャラクター名（"botan", "kasho", "yuri"）
+            user_id: ユーザーID
+            metadata: 追加メタデータ
+
+        Returns:
+            応答結果
+        """
+        # 統一プロンプト管理システムから基本プロンプトを取得
+        system_prompt = self.prompt_manager.get_combined_prompt(character)
+
+        # VLM用プロンプト構築
+        vlm_prompt = f"""{system_prompt}
+
+【画像理解の指示】
+- ユーザーが画像を送ってくれました
+- 画像の内容を注意深く観察してください
+- {character}の性格で、画像について自然に会話してください
+- 画像の詳細（色、形、雰囲気、文字など）に言及してください
+
+ユーザー: （画像を送信しました）
+
+{character}:"""
+
+        # LLM生成（VLM対応）
+        result = self.llm.generate(
+            prompt=vlm_prompt,
+            image_url=image_url,  # VLM用画像URL
+            temperature=0.8,
+            max_tokens=500,
+            metadata={
+                "character": character,
+                "user_id": user_id,
+                "vlm": True,
+                "has_image": True,
+                **(metadata or {})
+            }
+        )
+
+        response_text = result.get("response", "")
+
+        # Layer 5: 世界観整合性チェック
+        worldview_check = self.worldview_checker.check_response(response_text)
+
+        if not worldview_check["is_valid"]:
+            # 世界観違反の場合、フォールバック応答に置き換え
+            logger.warning(f"Layer 5: VLM応答が世界観違反 - {worldview_check['reason']}")
+            response_text = self.worldview_checker.get_fallback_response(character, user_message)
+            result["response"] = response_text
+            result["worldview_replaced"] = True
+            result["worldview_check"] = worldview_check
+        else:
+            result["worldview_replaced"] = False
+            result["worldview_check"] = worldview_check
+
+        return result
+
 
 class SimpleMockHandler:
     """モック会話ハンドラー（LLM呼び出しなし、テスト用）"""

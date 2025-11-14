@@ -80,37 +80,40 @@ class TracedLLM:
             prompt: Input prompt
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
-            image_url: Image URL (not supported by Ollama)
+            image_url: Image URL or data URI (base64). Supported by VLM models (llava, gemma3, etc.)
 
         Returns:
             Response dict with 'response', 'tokens', 'latency_ms'
         """
         start_time = time.time()
 
-        # Ollama doesn't support vision
-        if image_url:
-            return {
-                "response": "",
-                "tokens": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-                "latency_ms": 0,
+        try:
+            # Build request payload
+            payload = {
                 "model": self.model,
-                "provider": self.provider,
-                "error": "Ollama does not support vision/image input"
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_tokens
+                }
             }
 
-        try:
+            # Add image if provided (for VLM models like llava, gemma3)
+            if image_url:
+                # Extract base64 data from data URI (data:image/jpeg;base64,...)
+                if image_url.startswith("data:"):
+                    # Remove data URI prefix to get base64 string
+                    base64_data = image_url.split(",", 1)[1] if "," in image_url else image_url
+                    payload["images"] = [base64_data]
+                else:
+                    # If it's a URL, pass as-is (Ollama will fetch it)
+                    payload["images"] = [image_url]
+
             with httpx.Client(timeout=120.0) as client:
                 response = client.post(
                     f"{self.ollama_url}/api/generate",
-                    json={
-                        "model": self.model,
-                        "prompt": prompt,
-                        "stream": False,
-                        "options": {
-                            "temperature": temperature,
-                            "num_predict": max_tokens
-                        }
-                    }
+                    json=payload
                 )
                 response.raise_for_status()
                 result = response.json()

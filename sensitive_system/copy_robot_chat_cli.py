@@ -12,6 +12,7 @@ import json
 import os
 import time
 import csv
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -41,6 +42,7 @@ try:
     from conversation import InterestAnalyzer
     from src.line_bot.worldview_checker import WorldviewChecker
     from src.core.prompt_manager import PromptManager
+    from src.core.llm_tracing import TracedLLM
 except ImportError as e:
     print(f"[ERROR] Import failed: {e}")
     print(f"[ERROR] Current directory: {os.getcwd()}")
@@ -50,6 +52,9 @@ except ImportError as e:
     print(f"  cd {script_dir}")
     print(f"  python3 {Path(__file__).name} <args>")
     sys.exit(1)
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 
 class CopyRobotMemoryLoader:
@@ -539,6 +544,83 @@ class CopyRobotChat:
             # Fail silently to avoid disrupting chat
             pass
 
+    def _process_image_with_vlm(self, image_path: str, character: str) -> str:
+        """
+        VLMで画像を処理して応答を生成
+
+        Args:
+            image_path: 画像ファイルのパス
+            character: キャラクター名
+
+        Returns:
+            キャラクターの応答
+        """
+        try:
+            # システムプロンプト生成
+            system_prompt = self.generate_system_prompt(character, recent_context=True)
+
+            # VLM用プロンプト
+            vlm_prompt = f"""{system_prompt}
+
+【画像理解の指示】
+- ユーザーが画像を送ってくれました
+- 画像の内容を注意深く観察してください
+- {self.sister_names[character]}の性格で、画像について自然に会話してください
+- 画像の詳細（色、形、雰囲気）に言及してください
+
+ユーザー: （画像を送信しました）
+
+{self.sister_names[character]}の応答:"""
+
+            # TracedLLMでVLM呼び出し（デフォルト: gemma3:12b）
+            llm = TracedLLM(provider="ollama", model="gemma3:12b")
+
+            # 画像URLの正規化（ファイルパスをdata URIに変換）
+            from pathlib import Path
+            import base64
+            import mimetypes
+
+            image_file = Path(image_path)
+            with open(image_file, 'rb') as f:
+                image_data = f.read()
+
+            mime_type, _ = mimetypes.guess_type(str(image_file))
+            if not mime_type or not mime_type.startswith('image/'):
+                mime_type = 'image/jpeg'
+
+            base64_image = base64.b64encode(image_data).decode('utf-8')
+            image_url = f"data:{mime_type};base64,{base64_image}"
+
+            # VLM生成
+            result = llm.generate(
+                prompt=vlm_prompt,
+                image_url=image_url,
+                temperature=0.8,
+                max_tokens=500,
+                metadata={
+                    "character": character,
+                    "vlm": True,
+                    "has_image": True
+                }
+            )
+
+            response = result.get("response", "")
+
+            # Layer 5: 世界観チェック
+            check_result = self.worldview_checker.check_response(response)
+            if check_result["is_valid"]:
+                checked_response = response
+            else:
+                # 世界観違反の場合、フォールバック応答を使用
+                logger.warning(f"VLM応答が世界観違反: {check_result['reason']}")
+                checked_response = self.worldview_checker.get_fallback_response(character)
+
+            return checked_response
+
+        except Exception as e:
+            self.console.print(f"[red]VLM処理エラー: {e}[/red]")
+            return f"ごめんね、画像がうまく見られなかった...💦 ({e})"
+
     def generate_system_prompt(self, character: str, recent_context: bool = True) -> str:
         """
         システムプロンプトを生成（語彙統合）
@@ -920,6 +1002,7 @@ class CopyRobotChat:
         self.console.print("  reset          - 会話履歴をクリア")
         self.console.print("  reset <character> - 特定キャラクターの会話履歴をクリア (例: reset botan)")
         self.console.print("  @<character> <message> - 特定のキャラクターに話しかける (例: @botan こんにちは)")
+        self.console.print("  image:<path> [@<character>] - 画像について聞く (例: image:/path/to/cat.jpg @botan)")
         self.console.print("  llm:<number>  - LLMモデルを変更 (例: llm:26 または 26)")
         self.console.print("  llm:<number> <status> - モデルをテストしてステータス設定 (例: llm:26 ng, llm:26 ok)")
         self.console.print()
@@ -997,6 +1080,56 @@ class CopyRobotChat:
                             self.console.print(f"[red]エラー: 不明なキャラクター '{character}'[/red]")
                     else:
                         self.console.print("[red]エラー: メッセージを入力してください (例: @botan こんにちは)[/red]")
+                    continue
+
+                # image:<path> [@character]
+                elif user_input.lower().startswith('image:'):
+                    try:
+                        # Parse: "image:/path/to/image.jpg @botan"
+                        parts = user_input[6:].strip().split()
+                        if not parts:
+                            self.console.print("[red]エラー: 画像パスを指定してください (例: image:/path/to/cat.jpg)[/red]")
+                            continue
+
+                        image_path = parts[0]
+
+                        # Check if @character is specified
+                        target_character = None
+                        if len(parts) >= 2 and parts[1].startswith('@'):
+                            target_character = parts[1][1:].lower()
+                            if target_character not in self.sisters:
+                                self.console.print(f"[red]エラー: 不明なキャラクター '{target_character}'[/red]")
+                                continue
+
+                        # Validate image path
+                        if not Path(image_path).exists():
+                            self.console.print(f"[red]エラー: 画像ファイルが見つかりません: {image_path}[/red]")
+                            continue
+
+                        self.console.print()  # Add blank line before response
+
+                        # Process image with VLM
+                        if target_character:
+                            # Specific character
+                            response = self._process_image_with_vlm(image_path, target_character)
+                            self.console.print(f"[bold]{self.sister_names[target_character]}:[/bold] {response}")
+                            self._log_message(f"Image to {self.sister_names[target_character]}", image_path)
+                            self._log_message(self.sister_names[target_character], response)
+                            self.last_responder = target_character
+                        else:
+                            # Default to botan
+                            target_character = 'botan'
+                            response = self._process_image_with_vlm(image_path, target_character)
+                            self.console.print(f"[bold]{self.sister_names[target_character]}:[/bold] {response}")
+                            self._log_message(f"Image to {self.sister_names[target_character]}", image_path)
+                            self._log_message(self.sister_names[target_character], response)
+                            self.last_responder = target_character
+
+                        self.console.print()  # Add blank line after response
+
+                    except Exception as e:
+                        self.console.print(f"[red]エラー: 画像処理に失敗しました: {e}[/red]")
+
                     continue
 
                 # LLM model change: llm:<number> [status] or just <number>

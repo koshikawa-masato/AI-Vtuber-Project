@@ -28,6 +28,7 @@ from .sensitive_handler_v2 import SensitiveHandler, SimpleMockSensitiveHandler
 from .integrated_sensitive_detector import IntegratedSensitiveDetector
 from .session_manager import SessionManager, SimpleMockSessionManager
 from .websearch_client import WebSearchClient, MockWebSearchClient, GoogleSearchClient, SerpApiClient
+from .sticker_analyzer import StickerAnalyzer
 from src.core.llm_ollama import OllamaProvider
 
 # ロギング設定
@@ -80,8 +81,16 @@ if USE_REAL_LLM:
         enable_memory=ENABLE_MEMORY
     )
     logger.info(f"Phase 1統合: ConversationHandler初期化完了（実LLM, Memory={ENABLE_MEMORY}）")
+
+    # スタンプVLM解析
+    sticker_analyzer = StickerAnalyzer(
+        llm=conversation_handler.llm,
+        cache_db_path="/home/koshikawa/AI-Vtuber-Project/src/line_bot/database/sticker_cache.db"
+    )
+    logger.info("Phase 2統合: StickerAnalyzer初期化完了（VLM + Cache）")
 else:
     conversation_handler = SimpleMockHandler()
+    sticker_analyzer = None
     logger.info("Phase 1統合: SimpleMockHandler初期化完了（モック）")
 
 # Phase 5統合: WebSearch統合
@@ -223,6 +232,34 @@ def send_line_reply(reply_token: str, message: str, character: str = "botan") ->
         return False
 
 
+def get_image_content(message_id: str) -> Optional[bytes]:
+    """LINE Messaging APIから画像コンテンツを取得
+
+    Args:
+        message_id: メッセージID
+
+    Returns:
+        画像バイナリデータ、取得失敗時はNone
+    """
+    if MOCK_MODE:
+        logger.info(f"モックモード: 画像取得をスキップ (message_id={message_id})")
+        return None
+
+    url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
+    headers = {
+        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        logger.info(f"画像取得成功: message_id={message_id}, size={len(response.content)} bytes")
+        return response.content
+    except requests.exceptions.RequestException as e:
+        logger.error(f"画像取得エラー: {e}")
+        return None
+
+
 # ========================================
 # 署名検証
 # ========================================
@@ -303,9 +340,18 @@ async def webhook(
     for event in webhook_request.events:
         logger.info(f"イベント受信: type={event.type}, source={event.source.type}")
 
-        if event.type == "message" and event.message and event.message.type == "text":
-            # テキストメッセージ処理
-            await handle_text_message(event)
+        if event.type == "message" and event.message:
+            if event.message.type == "text":
+                # テキストメッセージ処理
+                await handle_text_message(event)
+            elif event.message.type == "image":
+                # 画像メッセージ処理（VLM統合）
+                await handle_image_message(event)
+            elif event.message.type == "sticker":
+                # スタンプメッセージ処理
+                await handle_sticker_message(event)
+            else:
+                logger.info(f"未対応メッセージタイプ: {event.message.type}")
         elif event.type == "follow":
             # 友だち追加処理
             await handle_follow(event)
@@ -531,6 +577,64 @@ async def handle_text_message(event):
             response_text = "ごめんなさい、エラーが発生しました..."
 
     # LINE Messaging APIで返信（キャラクター情報付き）
+    send_line_reply(reply_token, response_text, character)
+
+
+async def handle_image_message(event):
+    """画像メッセージ処理（現在は準備中）
+
+    Args:
+        event: LINE Webhookイベント
+    """
+    user_id = event.source.userId
+    message_id = event.message.id
+    reply_token = event.replyToken
+
+    logger.info(f"画像メッセージ: user_id={user_id}, message_id={message_id} (準備中メッセージを返信)")
+
+    # セッションから選択中のキャラクターを取得
+    session = session_manager.get_session(user_id)
+    character = session.get("selected_character", "botan")
+
+    # 三姉妹別の準備中メッセージ
+    preparation_messages = {
+        "botan": "画像とかスタンプも見れるようになりたいんだけど、まだ準備中なんだ〜！テキストで話しかけてね♪",
+        "kasho": "画像やスタンプの処理機能は現在開発中です。テキストメッセージでお話ししましょう。",
+        "yuri": "うーん、画像はまだ見れないんだよね...テキストで話してくれると嬉しいな。"
+    }
+    response_text = preparation_messages.get(character, preparation_messages["botan"])
+
+    # LINE Messaging APIで返信
+    send_line_reply(reply_token, response_text, character)
+
+
+async def handle_sticker_message(event):
+    """スタンプメッセージ処理（現在は準備中）
+
+    Args:
+        event: LINE Webhookイベント
+    """
+    user_id = event.source.userId
+    reply_token = event.replyToken
+    package_id = event.message.packageId
+    sticker_id = event.message.stickerId
+    sticker_type = event.message.stickerResourceType or "UNKNOWN"
+
+    logger.info(f"スタンプ受信: user_id={user_id}, packageId={package_id}, stickerId={sticker_id}, type={sticker_type} (準備中メッセージを返信)")
+
+    # セッションからキャラクター取得
+    session = session_manager.get_session(user_id)
+    character = session.get("selected_character", "botan")
+
+    # 三姉妹別の準備中メッセージ
+    preparation_messages = {
+        "botan": "スタンプありがと〜！でもまだスタンプには反応できないんだ...テキストで話しかけてね♪",
+        "kasho": "スタンプありがとう。でも、スタンプの処理機能は現在開発中なの。テキストでお話ししましょう。",
+        "yuri": "スタンプ可愛いね...でもまだ認識できないんだ。テキストで話してくれると嬉しいな。"
+    }
+    response_text = preparation_messages.get(character, preparation_messages["botan"])
+
+    # LINE Messaging APIで返信
     send_line_reply(reply_token, response_text, character)
 
 
