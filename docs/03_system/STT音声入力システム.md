@@ -35,13 +35,13 @@
 ### 使用機材
 
 - **マイク**: コンデンサマイク
-- **オーディオインターフェース**: （UAD Apollo推奨）
+- **オーディオインターフェース**: 任意（UAD Apolloでなくても可）
 - **DAW**: Ableton Live
 - **プラグイン**:
   - Ableton Live 標準（EQ Eight, Gate, Limiter）
   - Waves NS1 Noise Suppressor
-  - UAD 1176 Compressor
-  - UAD LA-2A Compressor
+  - UAD 1176 Compressor（Native動作、ハードウェア不要）
+  - UAD LA-2A Compressor（Native動作、ハードウェア不要）
   - Waves Renaissance DeEsser
 
 ---
@@ -144,13 +144,13 @@ Hold: 50-100ms
 
 **設定**:
 ```
-Threshold: 50-70%
-  - ノイズが消えるまで右に回す
+Threshold: 50-70%（スライダー）
+  - ノイズが消えるまでスライダーを上げる
   - やりすぎると声がこもる
 
 調整手順:
   1. 0%から開始
-  2. 少しずつ右に回す
+  2. 少しずつスライダーを上げる
   3. ノイズが消えるポイントを見つける
   4. そこから少し戻す（やりすぎ防止）
 ```
@@ -486,8 +486,8 @@ Ableton Liveのマスタートラックでレベルメーターを確認
 | EQ Eight | 無料（Ableton付属） | ハイパスフィルター、明瞭性向上 |
 | Gate | 無料（Ableton付属） | ノイズフロアカット |
 | Waves NS1 | $29〜（セール時） | 環境ノイズ除去 |
-| UAD 1176 | UADハードウェア必要 | 速いコンプレッション |
-| UAD LA-2A | UADハードウェア必要 | 滑らかなコンプレッション |
+| UAD 1176 | Native動作（サブスク or 買い切り） | 速いコンプレッション |
+| UAD LA-2A | Native動作（サブスク or 買い切り） | 滑らかなコンプレッション |
 | Waves RDeEsser | $29〜（セール時） | サ行処理 |
 | Limiter | 無料（Ableton付属） | 音割れ防止 |
 
@@ -517,6 +517,8 @@ EQ Eight → Gate → Compressor (速め) → Compressor (遅め)
 | 日付 | 更新内容 |
 |------|---------|
 | 2025-11-15 | 初版作成。実際の使用経験に基づいたエフェクトチェーン設定を記録 |
+| 2025-11-15 | UADプラグインがNative動作（ハードウェア不要）になったことを反映 |
+| 2025-11-15 | NS1のUIがスライダーに変更されたことを反映 |
 
 ---
 
