@@ -37,8 +37,8 @@ def main():
         print("   .env ファイルに設定してください")
         sys.exit(1)
 
-    # リッチメニュー画像のパス
-    menu_image_path = project_root / "assets" / "richmenu_sisters.png"
+    # リッチメニュー画像のパス（2段×3列）
+    menu_image_path = project_root / "assets" / "richmenu_2row_with_menu.png"
 
     if not menu_image_path.exists():
         print(f"❌ リッチメニュー画像が見つかりません: {menu_image_path}")
