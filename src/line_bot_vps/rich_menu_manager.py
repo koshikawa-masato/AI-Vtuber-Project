@@ -53,10 +53,10 @@ class RichMenuManager:
         menu_image_path: str,
         menu_name: str = "3姉妹キャラクター選択"
     ) -> Optional[str]:
-        """3姉妹キャラクター選択用のリッチメニューを作成（2段構成）
+        """3姉妹キャラクター選択用のリッチメニューを作成（2段×3列構成）
 
-        上段: プロフィール表示
-        下段: キャラクター選択
+        上段: キャラクター選択（牡丹、Kasho、ユリ）
+        下段: 機能メニュー（規約、ヘルプ、統計）
 
         Args:
             menu_image_path: メニュー画像のパス
@@ -65,64 +65,64 @@ class RichMenuManager:
         Returns:
             作成されたリッチメニューID（モックモード時はダミーID）
         """
-        logger.info(f"Creating rich menu (2-row layout): {menu_name}")
+        logger.info(f"Creating rich menu (2-row × 3-col layout): {menu_name}")
 
         # メニュー領域定義（2段×3列 = 6分割）
         menu_width = 2500
-        menu_height = 843
+        menu_height = 1686  # 2段メニュー
         area_width = menu_width // 3  # 833px
-        row_height = menu_height // 2  # 421px
+        row_height = menu_height // 2  # 843px
 
         areas = [
-            # 上段: プロフィール表示（3エリア）
+            # 上段: キャラクター選択（3エリア）
             RichMenuArea(
                 bounds_x=0,
                 bounds_y=0,
                 bounds_width=area_width,
                 bounds_height=row_height,
-                action_type="postback",
-                action_data="profile=botan"
-            ),
-            RichMenuArea(
-                bounds_x=area_width,
-                bounds_y=0,
-                bounds_width=area_width,
-                bounds_height=row_height,
-                action_type="postback",
-                action_data="profile=kasho"
-            ),
-            RichMenuArea(
-                bounds_x=area_width * 2,
-                bounds_y=0,
-                bounds_width=area_width,
-                bounds_height=row_height,
-                action_type="postback",
-                action_data="profile=yuri"
-            ),
-            # 下段: キャラクター選択（3エリア）
-            RichMenuArea(
-                bounds_x=0,
-                bounds_y=row_height,
-                bounds_width=area_width,
-                bounds_height=menu_height - row_height,
                 action_type="postback",
                 action_data="character=botan"
             ),
             RichMenuArea(
                 bounds_x=area_width,
-                bounds_y=row_height,
+                bounds_y=0,
                 bounds_width=area_width,
-                bounds_height=menu_height - row_height,
+                bounds_height=row_height,
                 action_type="postback",
                 action_data="character=kasho"
             ),
             RichMenuArea(
                 bounds_x=area_width * 2,
-                bounds_y=row_height,
+                bounds_y=0,
                 bounds_width=area_width,
-                bounds_height=menu_height - row_height,
+                bounds_height=row_height,
                 action_type="postback",
                 action_data="character=yuri"
+            ),
+            # 下段: 機能メニュー（3エリア）
+            RichMenuArea(
+                bounds_x=0,
+                bounds_y=row_height,
+                bounds_width=area_width,
+                bounds_height=row_height,
+                action_type="postback",
+                action_data="action=terms"
+            ),
+            RichMenuArea(
+                bounds_x=area_width,
+                bounds_y=row_height,
+                bounds_width=area_width,
+                bounds_height=row_height,
+                action_type="postback",
+                action_data="action=help"
+            ),
+            RichMenuArea(
+                bounds_x=area_width * 2,
+                bounds_y=row_height,
+                bounds_width=area_width,
+                bounds_height=row_height,
+                action_type="postback",
+                action_data="action=stats"
             ),
         ]
 

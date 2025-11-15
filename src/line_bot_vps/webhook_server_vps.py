@@ -25,6 +25,9 @@ load_dotenv()
 from .cloud_llm_provider import CloudLLMProvider
 from .learning_log_system import LearningLogSystem
 from .session_manager import SessionManager
+from .terms_flex_message import create_terms_flex_message
+from .help_flex_message import create_help_flex_message
+from .stats_flex_message import create_stats_flex_message
 
 # 既存のモジュールを活用
 import sys
@@ -257,7 +260,7 @@ async def webhook(request: Request):
         user_id = event.get("source", {}).get("userId", "unknown")
         reply_token = event.get("replyToken")
 
-        # Postbackイベント処理（キャラクター選択）
+        # Postbackイベント処理（キャラクター選択・メニューアクション）
         if event_type == "postback":
             postback_data = event.get("postback", {}).get("data", "")
             logger.info(f"📲 Postback受信: {postback_data}")
@@ -290,6 +293,88 @@ async def webhook(request: Request):
                             logger.error(f"❌ 返信エラー: {response.status_code}")
                     except Exception as e:
                         logger.error(f"❌ LINE API呼び出しエラー: {e}")
+
+            # 利用規約表示
+            elif postback_data == "action=terms":
+                try:
+                    import requests
+                    flex_message = create_terms_flex_message()
+
+                    reply_url = "https://api.line.me/v2/bot/message/reply"
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                    }
+                    payload = {
+                        "replyToken": reply_token,
+                        "messages": [{"type": "flex", "altText": "利用規約・免責事項", "contents": flex_message}]
+                    }
+                    response = requests.post(reply_url, headers=headers, json=payload)
+
+                    if response.status_code == 200:
+                        logger.info(f"✅ 利用規約返信成功")
+                    else:
+                        logger.error(f"❌ 返信エラー: {response.status_code}")
+                except Exception as e:
+                    logger.error(f"❌ 利用規約表示エラー: {e}")
+
+            # ヘルプ表示
+            elif postback_data == "action=help":
+                try:
+                    import requests
+                    flex_message = create_help_flex_message()
+
+                    reply_url = "https://api.line.me/v2/bot/message/reply"
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                    }
+                    payload = {
+                        "replyToken": reply_token,
+                        "messages": [{"type": "flex", "altText": "ヘルプ・使い方", "contents": flex_message}]
+                    }
+                    response = requests.post(reply_url, headers=headers, json=payload)
+
+                    if response.status_code == 200:
+                        logger.info(f"✅ ヘルプ返信成功")
+                    else:
+                        logger.error(f"❌ 返信エラー: {response.status_code}")
+                except Exception as e:
+                    logger.error(f"❌ ヘルプ表示エラー: {e}")
+
+            # 統計表示
+            elif postback_data == "action=stats":
+                try:
+                    import requests
+                    # セッション統計を取得
+                    current_character = session_manager.get_character_or_default(user_id, default=None)
+                    # TODO: 実際の会話回数を取得する機能を実装
+                    # 現在は雛形としてダミーデータ
+                    flex_message = create_stats_flex_message(
+                        total_messages=0,
+                        botan_count=0,
+                        kasho_count=0,
+                        yuri_count=0,
+                        current_character=current_character
+                    )
+
+                    reply_url = "https://api.line.me/v2/bot/message/reply"
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                    }
+                    payload = {
+                        "replyToken": reply_token,
+                        "messages": [{"type": "flex", "altText": "あなたの統計", "contents": flex_message}]
+                    }
+                    response = requests.post(reply_url, headers=headers, json=payload)
+
+                    if response.status_code == 200:
+                        logger.info(f"✅ 統計返信成功")
+                    else:
+                        logger.error(f"❌ 返信エラー: {response.status_code}")
+                except Exception as e:
+                    logger.error(f"❌ 統計表示エラー: {e}")
 
         # メッセージイベント処理
         elif event_type == "message":
