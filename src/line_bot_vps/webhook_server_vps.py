@@ -95,7 +95,7 @@ NGROK_URL = os.getenv("NGROK_URL", "https://dorothy-unmodulative-mariann.ngrok-f
 CHARACTERS = {
     "kasho": {
         "name": "Kasho",
-        "display_name": "花相（Kasho）",
+        "display_name": "Kasho（花相）",
         "age": 19,
         "icon_url": f"{NGROK_URL}/assets/kasho.png"
     },
