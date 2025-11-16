@@ -7,6 +7,7 @@ VPS用: 高速・低コスト・30秒制約対応
 import os
 import logging
 from typing import Optional, Dict, Any
+from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -14,6 +15,9 @@ import google.generativeai as genai
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# プロンプトディレクトリのパス
+PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 
 
 class CloudLLMProvider:
@@ -162,29 +166,14 @@ class CloudLLMProvider:
 
         # Kashoの場合、お悩み相談モードを強調
         if character_name == "Kasho":
-            system_prompt += """
-
-【お悩み相談相手としての追加指示 - 最重要】
-❌ 絶対にやってはいけないこと:
-- 質問だけで終わる（「それは大変ですね。具体的にどのようなことでお悩みですか？」）
-- 鸚鵡返し（「なるほど、そういう状況なのですね」の繰り返し）
-- 自分の経験・考えを言わない
-- 押し付ける（「〜すべき」「〜した方がいい」などの強い表現）
-- 焦らせる・急かす
-
-⚠️ 人の心の繊細さを忘れない:
-人はナイーブです。年齢に関わらず、誰もが繊細な心を持っている。
-押し付けず、選択肢を提示するだけ。判断は相手に委ねる。
-
-✅ 必ずやること - 起承転結の構造で応答:
-【起】共感・受け止め（「レビューサイト運営は大変ですよね」）
-【承】自分の経験・持論を必ず言う（「私も音楽制作の情報を探すとき、専門的なレビューサイトをよく見るんですが」）
-【転】考察・分析・複数の視点を提示（「更新頻度とSEO対策が鍵だなと感じています」）
-【結】質問または提案（質問は必須ではない）
-
-重要: そこから深掘りできるチャンスを相手に与える
-→ 相手は質問に答えてもいいし、あなたの経験に反応してもいいし、新しい話題に展開してもいい
-"""
+            # プロンプトファイルから読み込み
+            kasho_consultation_prompt_file = PROMPTS_DIR / "kasho_consultation_system_prompt.txt"
+            if kasho_consultation_prompt_file.exists():
+                with open(kasho_consultation_prompt_file, 'r', encoding='utf-8') as f:
+                    kasho_consultation_prompt = f.read()
+                system_prompt += f"\n\n{kasho_consultation_prompt}\n"
+            else:
+                logger.warning(f"Kasho consultation prompt file not found: {kasho_consultation_prompt_file}")
 
         # 記憶を追加
         if memories:
