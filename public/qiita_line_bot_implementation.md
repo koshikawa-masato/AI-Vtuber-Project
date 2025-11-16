@@ -2,13 +2,13 @@
 title: LINE BotでAI三姉妹とキャラクター切り替え会話を実装した話【FastAPI + OpenAI】
 tags:
   - Python
-  - FastAPI
   - LINE
   - OpenAI
+  - FastAPI
   - ChatGPT
 private: false
-updated_at: ''
-id: null
+updated_at: '2025-11-14T17:48:23+09:00'
+id: 086a2a3ed6c17ca092fe
 organization_url_name: null
 slide: false
 ignorePublish: false
@@ -20,7 +20,7 @@ LINE Botで**3人のAIキャラクターとリッチメニューで切り替え�
 
 ### 🎯 この記事で分かること
 
-- ✅ LINE Botのリッチメニュー実装（2段×3列レイアウト）
+- ✅ LINE Botのリッチメニュー実装（1段×3列レイアウト）
 - ✅ キャラクター切り替え機能の実装
 - ✅ FastAPIでのWebhook処理
 - ✅ OpenAI API（gpt-4o）の統合
@@ -39,12 +39,11 @@ LINE Botで**3人のAIキャラクターとリッチメニューで切り替え�
 
 ## デモ
 
-### リッチメニュー（2段×3列）
+### リッチメニュー（1段×3列）
 
-![リッチメニュー](https://raw.githubusercontent.com/koshikawa-masato/AI-Vtuber-Project/main/screenshots/rich_menu_3sisters.png)
+![リッチメニュー](https://raw.githubusercontent.com/koshikawa-masato/AI-Vtuber-Project/main/assets/richmenu_sisters.png)
 
-**上段**: プロフィール表示（タップで詳細表示）
-**下段**: キャラクター選択（タップで会話相手を切り替え）
+**キャラクター選択**: タップで会話相手を切り替え（牡丹・Kasho・ユリ）
 
 ### 実際の会話
 
@@ -164,7 +163,9 @@ class SessionManager:
 
 ### 2. リッチメニュー作成（RichMenuManager）
 
-2段×3列のリッチメニューを自動作成します。
+リッチメニューを自動作成します。
+
+**注**: 現在の実装は1段×3列ですが、コード上は2段×3列（上段: プロフィール表示、下段: キャラクター選択）に対応しています。将来的な拡張を想定した設計です。
 
 **src/line_bot_vps/rich_menu_manager.py**:
 
@@ -263,8 +264,8 @@ class RichMenuManager:
 
 **ポイント**:
 - 画像サイズ: 2500×843px（LINE公式推奨）
-- 上段: `profile=botan` → プロフィール表示
-- 下段: `character=botan` → キャラクター切り替え
+- コード上は2段レイアウトに対応（上段: プロフィール、下段: キャラクター選択）
+- 現在は1段×3列で運用（キャラクター選択のみ）
 - Postbackで処理を分岐
 
 ---
@@ -318,13 +319,20 @@ async def webhook(request: Request):
                     session_manager.set_character(user_id, character)
 
                     # 確認メッセージを返信
-                    reply_message = (
-                        f"✨ {CHARACTERS[character]['display_name']}を選択したよ！"
-                        f"何でも聞いてね！"
-                    )
+                    reply_message = f"✨ {CHARACTERS[character]['display_name']}を選択したよ！何でも聞いてね！"
 
                     # LINE Reply API呼び出し
-                    send_line_reply(reply_token, reply_message)
+                    import requests
+                    reply_url = "https://api.line.me/v2/bot/message/reply"
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                    }
+                    payload = {
+                        "replyToken": reply_token,
+                        "messages": [{"type": "text", "text": reply_message}]
+                    }
+                    response = requests.post(reply_url, headers=headers, json=payload)
 
         # メッセージイベント
         elif event_type == "message":
@@ -339,18 +347,32 @@ async def webhook(request: Request):
                     default="botan"
                 )
 
+                # プロンプト取得
+                character_prompt = prompt_manager.get_combined_prompt(character)
+
                 # LLM生成
-                bot_response = generate_response(
-                    character=character,
+                bot_response = llm_provider.generate_with_context(
                     user_message=user_message,
-                    user_id=user_id
+                    character_name=CHARACTERS[character]["name"],
+                    character_prompt=character_prompt,
+                    memories=None  # Phase D記憶システム統合予定
                 )
 
                 # 最終メッセージ時刻を更新
                 session_manager.update_last_message_time(user_id)
 
                 # LINE返信
-                send_line_reply(reply_token, bot_response)
+                import requests
+                reply_url = "https://api.line.me/v2/bot/message/reply"
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                }
+                payload = {
+                    "replyToken": reply_token,
+                    "messages": [{"type": "text", "text": bot_response}]
+                }
+                response = requests.post(reply_url, headers=headers, json=payload)
 
     return {"status": "ok"}
 ```

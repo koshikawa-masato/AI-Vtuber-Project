@@ -42,6 +42,13 @@ CHARACTER_INTERESTS: Dict[str, Dict[str, float]] = {
         'instruments': 0.7,
         'production': 0.8,
 
+        # Portable audio (NEW)
+        'portable_audio': 0.8,
+        'earphones': 0.8,
+        'headphones': 0.7,
+        'dap': 0.7,
+        'audio_equipment': 0.7,
+
         # Social interactions
         'greeting': 0.5,  # Polite and thoughtful
 
@@ -199,6 +206,38 @@ TOPIC_KEYWORDS: Dict[str, List[str]] = {
         '執筆', 'writing', 'write', '書く',
         '創作', 'creative writing', '文章', 'text',
         '作家', 'author', 'writer'
+    ],
+
+    # Portable audio (NEW - for Kasho)
+    'portable_audio': [
+        'ポータブルオーディオ', 'ポタオデ', 'portable audio',
+        '音響機器', 'audio equipment', 'オーディオ機器',
+        'ハイレゾ', 'hi-res', 'high resolution audio'
+    ],
+
+    'earphones': [
+        'イヤホン', 'earphone', 'earphones', 'イヤフォン',
+        'iem', 'カナル型', 'インイヤーモニター', 'in-ear',
+        '有線イヤホン', 'wired earphones', 'ワイヤレスイヤホン', 'wireless'
+    ],
+
+    'headphones': [
+        'ヘッドホン', 'headphone', 'headphones', 'ヘッドフォン',
+        'モニターヘッドホン', 'monitor headphones',
+        '密閉型', 'closed-back', '開放型', 'open-back'
+    ],
+
+    'dap': [
+        'dap', 'digital audio player', 'デジタルオーディオプレーヤー',
+        'ウォークマン', 'walkman', 'ポータブルプレーヤー',
+        'ハイレゾプレーヤー', 'hi-res player'
+    ],
+
+    'audio_equipment': [
+        'アンプ', 'amp', 'amplifier', 'ポタアン', 'portable amp',
+        'リケーブル', 'recable', 'ケーブル', 'cable',
+        'イヤーピース', 'eartips', 'ear tips',
+        'コーデック', 'codec', 'ldac', 'aptx', 'aac'
     ]
 }
 
