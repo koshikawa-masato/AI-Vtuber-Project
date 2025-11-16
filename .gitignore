@@ -178,3 +178,9 @@ node_modules/
 
 # npm lock file
 package-lock.json
+
+# MySQL utility scripts (contain credentials)
+scripts/test_mysql_*.py
+scripts/create_mysql_tables.py
+scripts/migrate_sqlite_to_mysql.py
+scripts/view_mysql_data.py

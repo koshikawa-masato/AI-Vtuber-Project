@@ -64,6 +64,7 @@ class CloudLLMProvider:
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
+        conversation_history: Optional[list] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> str:
         """
@@ -72,6 +73,7 @@ class CloudLLMProvider:
         Args:
             prompt: ユーザープロンプト
             system_prompt: システムプロンプト
+            conversation_history: 会話履歴 [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
             metadata: メタデータ（ログ用）
 
         Returns:
@@ -83,6 +85,11 @@ class CloudLLMProvider:
                 messages = []
                 if system_prompt:
                     messages.append({"role": "system", "content": system_prompt})
+
+                # 会話履歴を追加
+                if conversation_history:
+                    messages.extend(conversation_history)
+
                 messages.append({"role": "user", "content": prompt})
 
                 # OpenAI API呼び出し
@@ -130,6 +137,7 @@ class CloudLLMProvider:
         character_name: str,
         character_prompt: str,
         memories: Optional[str] = None,
+        conversation_history: Optional[list] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> str:
         """
@@ -140,6 +148,7 @@ class CloudLLMProvider:
             character_name: キャラクター名
             character_prompt: キャラクター別プロンプト
             memories: Phase D記憶（任意）
+            conversation_history: 会話履歴 [{"role": "user", "content": "..."}, ...]
             metadata: メタデータ
 
         Returns:
@@ -175,6 +184,7 @@ class CloudLLMProvider:
         return self.generate(
             prompt=user_message,
             system_prompt=system_prompt,
+            conversation_history=conversation_history,
             metadata=metadata
         )
 

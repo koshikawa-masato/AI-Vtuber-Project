@@ -83,7 +83,7 @@ def create_terms_flex_message() -> Dict[str, Any]:
                     "action": {
                         "type": "uri",
                         "label": "詳細を見る（GitHub）",
-                        "uri": "https://github.com/koshikawa-masato/AI-Vtuber-Project/blob/main/docs/牡丹プロジェクト_利用規約・免責事項.md"
+                        "uri": "https://github.com/koshikawa-masato/AI-Vtuber-Project"
                     },
                     "style": "link",
                     "color": "#999999"

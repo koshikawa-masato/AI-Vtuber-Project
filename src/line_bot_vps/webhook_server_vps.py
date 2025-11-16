@@ -9,9 +9,11 @@ VPS用 FastAPI Webhook サーバー
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Optional
 import hmac
 import hashlib
+import base64
 import logging
 from datetime import datetime
 import os
@@ -23,8 +25,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .cloud_llm_provider import CloudLLMProvider
-from .learning_log_system import LearningLogSystem
-from .session_manager import SessionManager
+from .learning_log_system_mysql import LearningLogSystemMySQL
+from .session_manager_mysql import SessionManagerMySQL
 from .terms_flex_message import create_terms_flex_message
 from .help_flex_message import create_help_flex_message
 from .stats_flex_message import create_stats_flex_message
@@ -47,6 +49,11 @@ app = FastAPI(
     description="VPS用 クラウドLLM + 学習ログシステム",
     version="0.1.0"
 )
+
+# 静的ファイル（アイコン画像）を配信
+from pathlib import Path
+project_root = Path(__file__).parent.parent.parent
+app.mount("/assets", StaticFiles(directory=str(project_root / "assets")), name="assets")
 
 # ========================================
 # 設定
@@ -71,36 +78,38 @@ llm_provider = CloudLLMProvider(
 )
 logger.info(f"✅ CloudLLMProvider初期化完了（{VPS_LLM_PROVIDER}: {VPS_LLM_MODEL}）")
 
-# 学習ログシステム初期化
-learning_log_system = LearningLogSystem(
-    db_path=os.getenv("LEARNING_LOG_DB_PATH", "./learning_logs.db")
-)
-logger.info("✅ LearningLogSystem初期化完了")
+# 学習ログシステム初期化（MySQL版）
+learning_log_system = LearningLogSystemMySQL()
+logger.info("✅ LearningLogSystemMySQL初期化完了")
 
-# セッション管理システム初期化
-session_manager = SessionManager()
-logger.info("✅ SessionManager初期化完了")
+# セッション管理システム初期化（MySQL版）
+session_manager = SessionManagerMySQL()
+logger.info("✅ SessionManagerMySQL初期化完了")
 
 # プロンプト管理システム初期化
 prompt_manager = PromptManager()
 logger.info("✅ PromptManager初期化完了")
 
 # キャラクター設定
+NGROK_URL = os.getenv("NGROK_URL", "https://dorothy-unmodulative-mariann.ngrok-free.dev")
 CHARACTERS = {
     "kasho": {
         "name": "Kasho",
         "display_name": "花生（Kasho）",
-        "age": 19
+        "age": 19,
+        "icon_url": f"{NGROK_URL}/assets/kasho.png"
     },
     "botan": {
         "name": "牡丹",
         "display_name": "牡丹（Botan）",
-        "age": 17
+        "age": 17,
+        "icon_url": f"{NGROK_URL}/assets/botan.png"
     },
     "yuri": {
         "name": "ユリ",
         "display_name": "百合（Yuri）",
-        "age": 15
+        "age": 15,
+        "icon_url": f"{NGROK_URL}/assets/yuri.png"
     }
 }
 
@@ -125,7 +134,7 @@ def verify_signature(body: bytes, signature: str) -> bool:
         hashlib.sha256
     ).digest()
 
-    expected_signature = hashlib.sha256(hash_digest).hexdigest()
+    expected_signature = base64.b64encode(hash_digest).decode('utf-8')
 
     return hmac.compare_digest(signature, expected_signature)
 
@@ -133,7 +142,8 @@ def verify_signature(body: bytes, signature: str) -> bool:
 def generate_response(
     character: str,
     user_message: str,
-    user_id: str
+    user_id: str,
+    conversation_history: Optional[list] = None
 ) -> tuple[str, float]:
     """
     応答生成
@@ -142,6 +152,7 @@ def generate_response(
         character: キャラクター名
         user_message: ユーザーメッセージ
         user_id: ユーザーID
+        conversation_history: 会話履歴 [{"role": "user", "content": "..."}, ...]
 
     Returns:
         (応答テキスト, 処理時間)
@@ -155,12 +166,13 @@ def generate_response(
         # TODO: Phase D記憶検索統合（copy_robot_memory.dbから）
         memories = None  # 将来的に実装
 
-        # LLM生成
+        # LLM生成（会話履歴を含む）
         response = llm_provider.generate_with_context(
             user_message=user_message,
             character_name=CHARACTERS[character]["name"],
             character_prompt=character_prompt,
             memories=memories,
+            conversation_history=conversation_history,
             metadata={
                 "user_id": user_id,
                 "character": character,
@@ -260,8 +272,49 @@ async def webhook(request: Request):
         user_id = event.get("source", {}).get("userId", "unknown")
         reply_token = event.get("replyToken")
 
+        # 友だち登録イベント処理（ウェルカムメッセージ）
+        if event_type == "follow":
+            logger.info(f"👋 新規友だち登録: {user_id[:8]}...")
+
+            try:
+                import requests
+                welcome_message = (
+                    "👋 友だち登録ありがとうございます！\n\n"
+                    "牡丹プロジェクトへようこそ！\n"
+                    "三姉妹（牡丹・Kasho・ユリ）とお話しできるよ。\n\n"
+                    "⚠️ 【重要なお知らせ】\n"
+                    "・テキストメッセージのみ対応しています\n"
+                    "・スタンプや画像は無視されます\n\n"
+                    "📱 まずは下のメニューから\n"
+                    "「キャラクター選択」をタップして\n"
+                    "話したいキャラクターを選んでね！\n\n"
+                    "利用規約・免責事項は\n"
+                    "メニューの「利用規約」から確認できます。"
+                )
+
+                reply_url = "https://api.line.me/v2/bot/message/reply"
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                }
+                payload = {
+                    "replyToken": reply_token,
+                    "messages": [{
+                        "type": "text",
+                        "text": welcome_message
+                    }]
+                }
+                response = requests.post(reply_url, headers=headers, json=payload)
+
+                if response.status_code == 200:
+                    logger.info(f"✅ ウェルカムメッセージ送信成功: {user_id[:8]}...")
+                else:
+                    logger.error(f"❌ ウェルカムメッセージ送信エラー: {response.status_code} - {response.text}")
+            except Exception as e:
+                logger.error(f"❌ ウェルカムメッセージ処理エラー: {e}")
+
         # Postbackイベント処理（キャラクター選択・メニューアクション）
-        if event_type == "postback":
+        elif event_type == "postback":
             postback_data = event.get("postback", {}).get("data", "")
             logger.info(f"📲 Postback受信: {postback_data}")
 
@@ -283,7 +336,14 @@ async def webhook(request: Request):
                         }
                         payload = {
                             "replyToken": reply_token,
-                            "messages": [{"type": "text", "text": reply_message}]
+                            "messages": [{
+                                "type": "text",
+                                "text": reply_message,
+                                "sender": {
+                                    "name": CHARACTERS[character]["display_name"],
+                                    "iconUrl": CHARACTERS[character]["icon_url"]
+                                }
+                            }]
                         }
                         response = requests.post(reply_url, headers=headers, json=payload)
 
@@ -314,7 +374,7 @@ async def webhook(request: Request):
                     if response.status_code == 200:
                         logger.info(f"✅ 利用規約返信成功")
                     else:
-                        logger.error(f"❌ 返信エラー: {response.status_code}")
+                        logger.error(f"❌ 返信エラー: {response.status_code} - {response.text}")
                 except Exception as e:
                     logger.error(f"❌ 利用規約表示エラー: {e}")
 
@@ -338,7 +398,7 @@ async def webhook(request: Request):
                     if response.status_code == 200:
                         logger.info(f"✅ ヘルプ返信成功")
                     else:
-                        logger.error(f"❌ 返信エラー: {response.status_code}")
+                        logger.error(f"❌ ヘルプ返信エラー: {response.status_code} - {response.text}")
                 except Exception as e:
                     logger.error(f"❌ ヘルプ表示エラー: {e}")
 
@@ -346,15 +406,17 @@ async def webhook(request: Request):
             elif postback_data == "action=stats":
                 try:
                     import requests
-                    # セッション統計を取得
+                    # ユーザーの会話統計を取得
                     current_character = session_manager.get_character_or_default(user_id, default=None)
-                    # TODO: 実際の会話回数を取得する機能を実装
-                    # 現在は雛形としてダミーデータ
+                    stats = session_manager.get_user_stats(user_id)
+
+                    logger.info(f"📊 統計取得: total={stats['total']}, botan={stats['botan']}, kasho={stats['kasho']}, yuri={stats['yuri']}")
+
                     flex_message = create_stats_flex_message(
-                        total_messages=0,
-                        botan_count=0,
-                        kasho_count=0,
-                        yuri_count=0,
+                        total_messages=stats['total'],
+                        botan_count=stats['botan'],
+                        kasho_count=stats['kasho'],
+                        yuri_count=stats['yuri'],
                         current_character=current_character
                     )
 
@@ -372,7 +434,7 @@ async def webhook(request: Request):
                     if response.status_code == 200:
                         logger.info(f"✅ 統計返信成功")
                     else:
-                        logger.error(f"❌ 返信エラー: {response.status_code}")
+                        logger.error(f"❌ 統計返信エラー: {response.status_code} - {response.text}")
                 except Exception as e:
                     logger.error(f"❌ 統計表示エラー: {e}")
 
@@ -389,15 +451,37 @@ async def webhook(request: Request):
 
                 logger.info(f"📩 メッセージ受信: {character} <- {user_message[:30]}...")
 
+                # 会話履歴を取得（過去10件）
+                conversation_history = session_manager.get_conversation_history(
+                    user_id=user_id,
+                    character=character,
+                    limit=10
+                )
+                if conversation_history:
+                    logger.info(f"📚 会話履歴取得: {len(conversation_history)}件")
+
                 # TODO: Phase 5センシティブ判定（軽量版）
                 # 現在は省略、将来的に実装
 
-                # 応答生成
+                # 応答生成（会話履歴を含む）
                 bot_response, response_time = generate_response(
                     character=character,
                     user_message=user_message,
-                    user_id=user_id
+                    user_id=user_id,
+                    conversation_history=conversation_history
                 )
+
+                # 会話履歴を保存（user + assistant）
+                try:
+                    session_manager.save_conversation(
+                        user_id=user_id,
+                        character=character,
+                        user_message=user_message,
+                        bot_response=bot_response
+                    )
+                    logger.debug(f"💾 会話履歴保存完了")
+                except Exception as e:
+                    logger.error(f"❌ 会話履歴保存エラー: {e}")
 
                 # 学習ログ保存
                 try:
@@ -436,7 +520,11 @@ async def webhook(request: Request):
                         "messages": [
                             {
                                 "type": "text",
-                                "text": bot_response
+                                "text": bot_response,
+                                "sender": {
+                                    "name": CHARACTERS[character]["display_name"],
+                                    "iconUrl": CHARACTERS[character]["icon_url"]
+                                }
                             }
                         ]
                     }
@@ -464,7 +552,7 @@ async def startup_event():
     logger.info("=" * 60)
     logger.info("🚀 VPS LINE Bot起動")
     logger.info(f"   LLM: {VPS_LLM_PROVIDER}/{VPS_LLM_MODEL}")
-    logger.info(f"   学習ログDB: {learning_log_system.db_path}")
+    logger.info(f"   学習ログDB: MySQL (SSH Tunnel)")
     logger.info(f"   キャラクター: {', '.join(CHARACTERS.keys())}")
     logger.info("=" * 60)
 
