@@ -35,6 +35,14 @@ CHARACTER_INTERESTS: Dict[str, Dict[str, float]] = {
     },
 
     'kasho': {
+        # Consultation and advice (PRIMARY ROLE)
+        'consultation': 0.9,  # お悩み相談
+        'worry': 0.9,         # 悩み事
+        'advice': 0.8,        # アドバイス
+        'thinking': 0.8,      # 考え事
+        'problem': 0.8,       # 問題・困りごと
+        'personal': 0.8,      # 個人的な話
+
         # Music and production
         'music': 0.9,
         'dtm': 0.9,
@@ -42,7 +50,7 @@ CHARACTER_INTERESTS: Dict[str, Dict[str, float]] = {
         'instruments': 0.7,
         'production': 0.8,
 
-        # Portable audio (NEW)
+        # Portable audio
         'portable_audio': 0.8,
         'earphones': 0.8,
         'headphones': 0.7,
@@ -90,6 +98,34 @@ CHARACTER_INTERESTS: Dict[str, Dict[str, float]] = {
 # ============================================================================
 
 TOPIC_KEYWORDS: Dict[str, List[str]] = {
+    # Consultation and advice (for Kasho)
+    'consultation': [
+        '相談', 'そうだん', '話を聞いて', '話聞いて', 'アドバイス', 'advice',
+        '聞いてほしい', '聞いて欲しい', 'どうしたらいい', 'どうすればいい',
+        '教えて', '意見', 'どう思う', 'どう思います'
+    ],
+
+    'worry': [
+        '悩み', 'なやみ', '悩んでる', '悩んでいる', '困ってる', '困っている',
+        '迷ってる', '迷っている', '不安', 'worry', 'troubled',
+        'どうしよう', 'わからない', '分からない'
+    ],
+
+    'thinking': [
+        '考えてる', '考えている', '考え中', '考え事', 'thinking',
+        'どうかな', 'どうだろう', '悩ましい', '迷う'
+    ],
+
+    'problem': [
+        '問題', 'もんだい', '困難', 'problem', 'issue', 'trouble',
+        'うまくいかない', '上手くいかない', '難しい', '大変'
+    ],
+
+    'personal': [
+        '個人的', '個人的な話', 'プライベート', 'private', 'personal',
+        '実は', 'じつは', '本当は', 'ほんとは'
+    ],
+
     'greeting': [
         # Standard Japanese greetings
         'こんにちは', 'こんばんは', 'おはよう', 'はじめまして', 'よろしく',
