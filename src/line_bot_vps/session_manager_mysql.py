@@ -110,11 +110,12 @@ class SessionManagerMySQL:
 
         return success
 
-    def update_last_message_time(self, user_id: str) -> bool:
+    def update_last_message_time(self, user_id: str, character: str = None) -> bool:
         """最終メッセージ時刻を更新
 
         Args:
             user_id: LINEユーザーID
+            character: 現在のキャラクター名（指定すればselected_characterも更新）
 
         Returns:
             成功したらTrue
@@ -123,9 +124,10 @@ class SessionManagerMySQL:
             if not self.connect():
                 return False
 
-        # 既存のセッションを取得
-        session = self.mysql_manager.get_session(user_id)
-        character = session.get('selected_character') if session else None
+        # キャラクターが指定されていない場合は既存のセッションから取得
+        if character is None:
+            session = self.mysql_manager.get_session(user_id)
+            character = session.get('selected_character') if session else None
 
         # セッション更新
         return self.mysql_manager.save_session(
@@ -154,6 +156,7 @@ class SessionManagerMySQL:
         """
         if not self.connected:
             if not self.connect():
+                logger.error(f"❌ MySQL接続失敗のため会話履歴を保存できません: user={user_id[:8]}...")
                 return False
 
         # ユーザーメッセージを保存
