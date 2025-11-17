@@ -79,17 +79,45 @@ llm_provider = CloudLLMProvider(
 )
 logger.info(f"✅ CloudLLMProvider初期化完了（{VPS_LLM_PROVIDER}: {VPS_LLM_MODEL}）")
 
+# グローバルなMySQLManager（トンネルを1本に統一）
+mysql_manager = MySQLManager()
+logger.info("✅ MySQLManager初期化完了")
+
 # 学習ログシステム初期化（MySQL版）
-learning_log_system = LearningLogSystemMySQL()
+learning_log_system = LearningLogSystemMySQL(mysql_manager=mysql_manager)
 logger.info("✅ LearningLogSystemMySQL初期化完了")
 
 # セッション管理システム初期化（MySQL版）
-session_manager = SessionManagerMySQL()
+session_manager = SessionManagerMySQL(mysql_manager=mysql_manager)
 logger.info("✅ SessionManagerMySQL初期化完了")
 
 # プロンプト管理システム初期化
 prompt_manager = PromptManager()
 logger.info("✅ PromptManager初期化完了")
+
+# ========================================
+# アプリケーションライフサイクル
+# ========================================
+
+@app.on_event("startup")
+async def startup_event():
+    """アプリケーション起動時の処理"""
+    # MySQL接続（SSHトンネル作成）
+    if mysql_manager.connect():
+        logger.info("🎉 MySQL接続成功（SSHトンネル確立）")
+    else:
+        logger.error("❌ MySQL接続失敗")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """アプリケーション終了時の処理"""
+    # MySQL切断（SSHトンネルクローズ）
+    mysql_manager.disconnect()
+    logger.info("👋 MySQL接続を切断しました")
+
+# ========================================
+# キャラクター設定
+# ========================================
 
 # キャラクター設定
 NGROK_URL = os.getenv("NGROK_URL", "https://dorothy-unmodulative-mariann.ngrok-free.dev")
@@ -167,13 +195,11 @@ def generate_response(
         # TODO: Phase D記憶検索統合（copy_robot_memory.dbから）
         memories = None  # 将来的に実装
 
-        # 今日のトレンド情報を取得（MySQLから）
+        # 今日のトレンド情報を取得（MySQLから）※グローバルmysql_managerを使用
         daily_trends = None
         try:
-            mysql_mgr = MySQLManager()
-            if mysql_mgr.connect():
-                daily_trends = mysql_mgr.get_recent_trends(character=character, limit=3)
-                mysql_mgr.disconnect()
+            if mysql_manager.connection or mysql_manager.connect():
+                daily_trends = mysql_manager.get_recent_trends(character=character, limit=3)
                 if daily_trends:
                     logger.info(f"✅ トレンド情報取得: {len(daily_trends)}件")
         except Exception as e:
