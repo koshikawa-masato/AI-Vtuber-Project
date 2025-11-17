@@ -39,12 +39,49 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from core.prompt_manager import PromptManager
 
-# ロギング設定
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# ロギング設定（日次ローテーション）
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
+
+# ログディレクトリ作成
+LOG_DIR = Path(__file__).parent.parent.parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE = LOG_DIR / "line_bot_vps.log"
+
+# ロガー設定
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# フォーマッター
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# 日次ローテーションハンドラー
+file_handler = TimedRotatingFileHandler(
+    filename=str(LOG_FILE),
+    when='midnight',      # 毎日0時にローテーション
+    interval=1,           # 1日ごと
+    backupCount=7,        # 7日分保持
+    encoding='utf-8'
+)
+file_handler.setFormatter(formatter)
+file_handler.suffix = "%Y-%m-%d"  # ローテート後のファイル名: line_bot_vps.log.2025-11-17
+
+# コンソールハンドラー（開発用）
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+
+# ハンドラー追加
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+# ルートロガーも設定（他のモジュールのログも記録）
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+root_logger.addHandler(file_handler)
+root_logger.addHandler(console_handler)
 
 # FastAPIアプリ作成
 app = FastAPI(
