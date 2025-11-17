@@ -31,7 +31,7 @@ from .mysql_manager import MySQLManager
 from .terms_flex_message import create_terms_flex_message
 from .help_flex_message import create_help_flex_message
 from .stats_flex_message import create_stats_flex_message
-from .line_notify import LineNotify
+from .feedback_notifier import FeedbackNotifier
 from .auto_character_selector import AutoCharacterSelector
 
 # 既存のモジュールを活用
@@ -97,9 +97,9 @@ logger.info("✅ SessionManagerMySQL初期化完了")
 prompt_manager = PromptManager()
 logger.info("✅ PromptManager初期化完了")
 
-# LINE Notify 初期化
-line_notify = LineNotify()
-logger.info("✅ LineNotify初期化完了")
+# フィードバック通知システム初期化（Messaging API）
+feedback_notifier = FeedbackNotifier(channel_access_token=CHANNEL_ACCESS_TOKEN)
+logger.info("✅ FeedbackNotifier初期化完了（Messaging API）")
 
 # 三姉妹自動選択システム初期化
 auto_character_selector = AutoCharacterSelector(mysql_manager=mysql_manager)
@@ -594,8 +594,8 @@ async def webhook(request: Request):
                         mysql_manager.save_feedback(user_id, user_message)
                         mysql_manager.set_feedback_state(user_id, "none")
 
-                        # LINE Notify で開発者に通知
-                        line_notify.send_feedback_notification(user_id, user_message)
+                        # Messaging API で開発者に通知
+                        feedback_notifier.send_feedback_notification(user_id, user_message)
 
                         bot_response = (
                             "✅ フィードバックを受け付けました！\n"
