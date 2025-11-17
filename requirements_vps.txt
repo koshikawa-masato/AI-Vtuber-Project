@@ -8,6 +8,7 @@ python-multipart==0.0.6
 # LLM Providers
 openai>=1.50.0
 google-generativeai>=0.8.0
+anthropic>=0.18.0
 
 # LINE Bot SDK
 line-bot-sdk==3.6.0

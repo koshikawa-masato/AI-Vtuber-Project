@@ -11,13 +11,8 @@ from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 import google.generativeai as genai
+import anthropic
 import requests
-
-# Anthropic は Claude 使用時のみ必要（VPSでは不要）
-try:
-    import anthropic
-except ImportError:
-    anthropic = None
 
 load_dotenv()
 
@@ -69,9 +64,6 @@ class CloudLLMProvider:
             logger.info(f"✅ Gemini初期化完了: {model}")
 
         elif provider == "claude":
-            if anthropic is None:
-                raise ImportError("anthropic package is not installed. Install it with: pip install anthropic")
-
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
