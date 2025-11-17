@@ -6,7 +6,7 @@ VPS用: 高速・低コスト・30秒制約対応
 
 import os
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
