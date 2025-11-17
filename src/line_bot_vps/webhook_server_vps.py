@@ -146,7 +146,7 @@ CHARACTERS = {
     },
     "yuri": {
         "name": "ユリ",
-        "display_name": "百合（Yuri）",
+        "display_name": "ユリ（Yuri）",
         "age": 15,
         "icon_url": f"{NGROK_URL}/assets/yuri.png"
     }
