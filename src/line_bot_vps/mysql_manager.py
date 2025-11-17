@@ -266,3 +266,50 @@ class MySQLManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """コンテキストマネージャー終了時の処理"""
         self.disconnect()
+
+    def get_recent_trends(
+        self,
+        character: str,
+        limit: int = 3
+    ) -> List[Dict[str, Any]]:
+        """最新のトレンド情報を取得（daily_trendsテーブル）
+
+        Args:
+            character: 'botan', 'kasho', 'yuri', 'parent'
+            limit: 取得件数（デフォルト: 3）
+
+        Returns:
+            トレンド情報のリスト（新しい順）
+            各要素は {topic, content (JSON), created_at} を含む
+        """
+        if not self.connection:
+            logger.error("MySQL未接続")
+            return []
+
+        try:
+            with self.connection.cursor() as cursor:
+                sql = """
+                    SELECT topic, content, created_at
+                    FROM daily_trends
+                    WHERE `character` = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                """
+                cursor.execute(sql, (character, limit))
+                results = cursor.fetchall()
+
+                # JSON文字列をパース
+                for result in results:
+                    if isinstance(result.get('content'), str):
+                        try:
+                            import json
+                            result['content'] = json.loads(result['content'])
+                        except json.JSONDecodeError:
+                            logger.warning(f"JSON parse failed for content: {result.get('content', '')[:50]}...")
+
+                logger.debug(f"トレンド情報取得: character={character}, count={len(results)}")
+                return results
+
+        except Exception as e:
+            logger.error(f"トレンド情報取得失敗: {e}")
+            return []

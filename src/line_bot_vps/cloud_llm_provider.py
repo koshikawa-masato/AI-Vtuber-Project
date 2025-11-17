@@ -141,6 +141,7 @@ class CloudLLMProvider:
         character_name: str,
         character_prompt: str,
         memories: Optional[str] = None,
+        daily_trends: Optional[List[Dict[str, Any]]] = None,
         conversation_history: Optional[list] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> str:
@@ -152,6 +153,7 @@ class CloudLLMProvider:
             character_name: キャラクター名
             character_prompt: キャラクター別プロンプト
             memories: Phase D記憶（任意）
+            daily_trends: 今日のトレンド情報（任意）
             conversation_history: 会話履歴 [{"role": "user", "content": "..."}, ...]
             metadata: メタデータ
 
@@ -178,6 +180,22 @@ class CloudLLMProvider:
         # 記憶を追加
         if memories:
             system_prompt += f"\n\n【記憶】\n{memories}\n"
+
+        # 今日のトレンド情報を追加
+        if daily_trends:
+            trends_text = "\n".join([
+                f"- {trend.get('topic', 'トレンド')}: {trend.get('content', '')[:200]}..."
+                for trend in daily_trends
+            ])
+
+            # プロンプトファイルから読み込み
+            trends_prompt_file = PROMPTS_DIR / "daily_trends_system_prompt.txt"
+            if trends_prompt_file.exists():
+                with open(trends_prompt_file, 'r', encoding='utf-8') as f:
+                    trends_prompt_template = f.read()
+                system_prompt += f"\n\n{trends_prompt_template.format(trends_text=trends_text)}\n"
+            else:
+                logger.warning(f"Trends prompt file not found: {trends_prompt_file}")
 
         system_prompt += """
 

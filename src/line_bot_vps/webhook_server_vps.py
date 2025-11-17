@@ -27,6 +27,7 @@ load_dotenv()
 from .cloud_llm_provider import CloudLLMProvider
 from .learning_log_system_mysql import LearningLogSystemMySQL
 from .session_manager_mysql import SessionManagerMySQL
+from .mysql_manager import MySQLManager
 from .terms_flex_message import create_terms_flex_message
 from .help_flex_message import create_help_flex_message
 from .stats_flex_message import create_stats_flex_message
@@ -166,12 +167,25 @@ def generate_response(
         # TODO: Phase D記憶検索統合（copy_robot_memory.dbから）
         memories = None  # 将来的に実装
 
-        # LLM生成（会話履歴を含む）
+        # 今日のトレンド情報を取得（MySQLから）
+        daily_trends = None
+        try:
+            mysql_mgr = MySQLManager()
+            if mysql_mgr.connect():
+                daily_trends = mysql_mgr.get_recent_trends(character=character, limit=3)
+                mysql_mgr.disconnect()
+                if daily_trends:
+                    logger.info(f"✅ トレンド情報取得: {len(daily_trends)}件")
+        except Exception as e:
+            logger.warning(f"⚠️ トレンド情報取得失敗（スキップ）: {e}")
+
+        # LLM生成（会話履歴 + トレンド情報を含む）
         response = llm_provider.generate_with_context(
             user_message=user_message,
             character_name=CHARACTERS[character]["name"],
             character_prompt=character_prompt,
             memories=memories,
+            daily_trends=daily_trends,
             conversation_history=conversation_history,
             metadata={
                 "user_id": user_id,
