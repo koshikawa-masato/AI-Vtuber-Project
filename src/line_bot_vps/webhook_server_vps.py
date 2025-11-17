@@ -461,8 +461,7 @@ async def webhook(request: Request):
                     "- 機能要望\n"
                     "- 改善提案\n"
                     "- その他ご意見\n\n"
-                    "次のメッセージでフィードバックを入力してください。\n"
-                    "（キャンセルする場合は「キャンセル」と送信）"
+                    "次のメッセージでフィードバックを入力してください。"
                 )
 
                 try:
@@ -476,7 +475,19 @@ async def webhook(request: Request):
                         "replyToken": reply_token,
                         "messages": [{
                             "type": "text",
-                            "text": reply_message
+                            "text": reply_message,
+                            "quickReply": {
+                                "items": [
+                                    {
+                                        "type": "action",
+                                        "action": {
+                                            "type": "message",
+                                            "label": "❌ キャンセル",
+                                            "text": "キャンセル"
+                                        }
+                                    }
+                                ]
+                            }
                         }]
                     }
                     response = requests.post(reply_url, headers=headers, json=payload)
