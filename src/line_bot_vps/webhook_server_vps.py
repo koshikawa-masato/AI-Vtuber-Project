@@ -31,6 +31,8 @@ from .mysql_manager import MySQLManager
 from .terms_flex_message import create_terms_flex_message
 from .help_flex_message import create_help_flex_message
 from .stats_flex_message import create_stats_flex_message
+from .line_notify import LineNotify
+from .auto_character_selector import AutoCharacterSelector
 
 # 既存のモジュールを活用
 import sys
@@ -94,6 +96,14 @@ logger.info("✅ SessionManagerMySQL初期化完了")
 # プロンプト管理システム初期化
 prompt_manager = PromptManager()
 logger.info("✅ PromptManager初期化完了")
+
+# LINE Notify 初期化
+line_notify = LineNotify()
+logger.info("✅ LineNotify初期化完了")
+
+# 三姉妹自動選択システム初期化
+auto_character_selector = AutoCharacterSelector(mysql_manager=mysql_manager)
+logger.info("✅ AutoCharacterSelector初期化完了")
 
 # ========================================
 # アプリケーションライフサイクル
@@ -394,6 +404,90 @@ async def webhook(request: Request):
                     except Exception as e:
                         logger.error(f"❌ LINE API呼び出しエラー: {e}")
 
+            # モード設定処理（自動/固定）
+            elif postback_data.startswith("action=set_mode&mode="):
+                mode = postback_data.split("mode=")[1]
+                if mode in ["auto", "botan", "kasho", "yuri"]:
+                    mysql_manager.set_user_mode(user_id, mode)
+
+                    # モード別確認メッセージ
+                    if mode == "auto":
+                        reply_message = (
+                            "✅ 自動モードに設定しました！\n\n"
+                            "これからは、話題に合わせて三姉妹が自動的に応答します。\n\n"
+                            "🌸 牡丹: VTuber、エンタメ\n"
+                            "🎵 Kasho: 音楽、オーディオ\n"
+                            "📚 ユリ: サブカル、アニメ、ライトノベル\n\n"
+                            "※ 特定のキャラクターと話したい場合は、下のボタンから選んでね！"
+                        )
+                    elif mode == "botan":
+                        reply_message = "✅ 牡丹に固定しました！\nこれからは牡丹があなたの質問に答えるよ！\n\n話したいことある？"
+                    elif mode == "kasho":
+                        reply_message = "✅ Kashoに固定しました！\nこれからはKashoがあなたの質問に答えますね。\n\n何でも聞いてください。"
+                    elif mode == "yuri":
+                        reply_message = "✅ ユリに固定しました！\nこれからはユリがあなたの質問に答えるね。\n\n何か知りたいことある？"
+
+                    try:
+                        import requests
+                        reply_url = "https://api.line.me/v2/bot/message/reply"
+                        headers = {
+                            "Content-Type": "application/json",
+                            "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                        }
+                        payload = {
+                            "replyToken": reply_token,
+                            "messages": [{
+                                "type": "text",
+                                "text": reply_message
+                            }]
+                        }
+                        response = requests.post(reply_url, headers=headers, json=payload)
+
+                        if response.status_code == 200:
+                            logger.info(f"✅ モード設定返信成功: {mode}")
+                        else:
+                            logger.error(f"❌ 返信エラー: {response.status_code}")
+                    except Exception as e:
+                        logger.error(f"❌ LINE API呼び出しエラー: {e}")
+
+            # フィードバック受付
+            elif postback_data == "action=feedback":
+                mysql_manager.set_feedback_state(user_id, "waiting")
+
+                reply_message = (
+                    "📝 フィードバックをお待ちしています！\n\n"
+                    "以下のような内容をお送りください：\n"
+                    "- バグ報告\n"
+                    "- 機能要望\n"
+                    "- 改善提案\n"
+                    "- その他ご意見\n\n"
+                    "次のメッセージでフィードバックを入力してください。\n"
+                    "（キャンセルする場合は「キャンセル」と送信）"
+                )
+
+                try:
+                    import requests
+                    reply_url = "https://api.line.me/v2/bot/message/reply"
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                    }
+                    payload = {
+                        "replyToken": reply_token,
+                        "messages": [{
+                            "type": "text",
+                            "text": reply_message
+                        }]
+                    }
+                    response = requests.post(reply_url, headers=headers, json=payload)
+
+                    if response.status_code == 200:
+                        logger.info(f"✅ フィードバック受付返信成功")
+                    else:
+                        logger.error(f"❌ 返信エラー: {response.status_code}")
+                except Exception as e:
+                    logger.error(f"❌ LINE API呼び出しエラー: {e}")
+
             # 利用規約表示
             elif postback_data == "action=terms":
                 try:
@@ -486,8 +580,71 @@ async def webhook(request: Request):
                 # テキストメッセージ処理
                 user_message = event.get("message", {}).get("text", "")
 
-                # SessionManagerからキャラクターを取得（デフォルト: 牡丹）
-                character = session_manager.get_character_or_default(user_id, default="botan")
+                # フィードバック待ち状態の確認
+                feedback_state = mysql_manager.get_feedback_state(user_id)
+
+                if feedback_state == "waiting":
+                    # フィードバック処理
+                    if user_message.lower() in ["キャンセル", "cancel"]:
+                        # キャンセル
+                        mysql_manager.set_feedback_state(user_id, "none")
+                        bot_response = "フィードバックをキャンセルしました。"
+                    else:
+                        # フィードバック保存
+                        mysql_manager.save_feedback(user_id, user_message)
+                        mysql_manager.set_feedback_state(user_id, "none")
+
+                        # LINE Notify で開発者に通知
+                        line_notify.send_feedback_notification(user_id, user_message)
+
+                        bot_response = (
+                            "✅ フィードバックを受け付けました！\n"
+                            "ありがとうございます！\n\n"
+                            "開発者に通知しました。\n"
+                            "今後の改善に活かさせていただきます。"
+                        )
+
+                    # LINE返信
+                    try:
+                        import requests
+                        reply_url = "https://api.line.me/v2/bot/message/reply"
+                        headers = {
+                            "Content-Type": "application/json",
+                            "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                        }
+                        payload = {
+                            "replyToken": reply_token,
+                            "messages": [{
+                                "type": "text",
+                                "text": bot_response
+                            }]
+                        }
+                        response = requests.post(reply_url, headers=headers, json=payload)
+
+                        if response.status_code == 200:
+                            logger.info(f"✅ フィードバック処理完了")
+                        else:
+                            logger.error(f"❌ 返信エラー: {response.status_code}")
+                    except Exception as e:
+                        logger.error(f"❌ LINE API呼び出しエラー: {e}")
+
+                    continue  # 次のイベントへ
+
+                # 通常メッセージ処理
+                # モード取得（auto / botan / kasho / yuri）
+                selected_mode = mysql_manager.get_user_mode(user_id)
+
+                if selected_mode == "auto":
+                    # 自動モード: 三姉妹で親和性スコアリング
+                    selection_result = auto_character_selector.select_best_character(user_message)
+                    character = selection_result["character"]
+                    scores = selection_result["scores"]
+
+                    logger.info(f"🎯 自動選択: {character} (スコア: {scores})")
+                else:
+                    # 固定モード
+                    character = selected_mode
+                    logger.info(f"📌 固定モード: {character}")
 
                 logger.info(f"📩 メッセージ受信: {character} <- {user_message[:30]}...")
 
