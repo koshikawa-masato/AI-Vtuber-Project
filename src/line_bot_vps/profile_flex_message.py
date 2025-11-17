@@ -40,7 +40,7 @@ PROFILES = {
         "color": "#9370DB"  # 紫
     },
     "yuri": {
-        "name": "百合",
+        "name": "ユリ",
         "name_en": "Yuri",
         "age": 15,
         "birthday": "7月7日",
