@@ -681,17 +681,20 @@ async def webhook(request: Request):
 
                 # 会話履歴を保存（user + assistant）
                 try:
-                    session_manager.save_conversation(
+                    success = session_manager.save_conversation(
                         user_id=user_id,
                         character=character,
                         user_message=user_message,
                         bot_response=bot_response
                     )
-                    logger.debug(f"💾 会話履歴保存完了")
+                    if success:
+                        logger.debug(f"💾 会話履歴保存完了")
+                    else:
+                        logger.error(f"❌ 会話履歴保存失敗: save_conversation returned False")
                 except Exception as e:
                     logger.error(f"❌ 会話履歴保存エラー: {e}")
 
-                # 学習ログ保存
+                # 学習ログ保存（SQLite）
                 try:
                     learning_log_system.save_log(
                         character=character,
@@ -709,10 +712,23 @@ async def webhook(request: Request):
                         }
                     )
                 except Exception as e:
-                    logger.error(f"❌ 学習ログ保存エラー: {e}")
+                    logger.error(f"❌ 学習ログ保存エラー（SQLite）: {e}")
 
-                # 最終メッセージ時刻を更新
-                session_manager.update_last_message_time(user_id)
+                # 学習ログ保存（MySQL）
+                try:
+                    if mysql_manager.connection or mysql_manager.connect():
+                        mysql_manager.save_learning_log(
+                            user_id=user_id,  # MySQLには生のuser_idを保存
+                            character=character,
+                            user_message=user_message,
+                            bot_response=bot_response,
+                            response_time=response_time
+                        )
+                except Exception as e:
+                    logger.error(f"❌ 学習ログ保存エラー（MySQL）: {e}")
+
+                # 最終メッセージ時刻を更新（selected_characterも更新）
+                session_manager.update_last_message_time(user_id, character)
 
                 # LINE返信
                 try:

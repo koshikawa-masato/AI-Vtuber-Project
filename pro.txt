@@ -1,0 +1,444 @@
+# センシティブ判定システム + プロレス学習 統合詳細設計書（改訂版）
+
+- **版数**: 1.1.0（フィードバック統合 & 引き算版）
+- **作成日**: 2025-11-14
+- **作成者**: 越川将人 & Claude Code & ChatGPT（設計整理）
+- **ベースドキュメント**: `センシティブ判定システム + プロレス学習統合設計書 v1.0.0`
+
+---
+
+## 1. 変更概要（v1.0.0 → v1.1.0）
+
+この改訂版では、以下の2点を主目的とする。
+
+1. **サムズアップ / サムズダウン（👍 / 👎）によるフィードバックを設計に統合**
+   - プロレスパターンに対する「人間の主観的好感度」を DB と評価ロジックに追加
+   - success_rate（会話継続率）と like_rate（好感度）を両方見るハイブリッド評価へ
+
+2. **「引き算視点」を取り入れた MVP 志向の整理**
+   - 元の v1.0.0 設計から、**初期フェーズでは実装しない要素**を明確に分離
+   - 実装スコープの優先度をドキュメント上で可視化
+
+---
+
+## 2. 引き算視点：MVP と後回しにするもの
+
+### 2.1 今回（MVP）でやること
+
+**目的**: 「LINE Bot で安全にプロレスっぽい受けを返せる」最小構成を回し始める。
+
+- VPS（本番環境）
+  - LINE Bot Webhook サーバ
+  - LLM（例: gpt-4o）による応答生成
+  - センシティブ判定 Layer 1〜5 の **初期版**
+  - プロレスパターン DB からの **単純なベストパターン参照**
+
+- ローカル環境
+  - VPS ログ収集（SSH + 抽出スクリプト）
+  - 離脱会話の検出（簡易ルール：一定時間以上返信なし）
+  - **手動 or ローカル LLM を使った反実仮想案の生成**
+    - 数パターンだけでもよい
+  - プロレスパターン DB への登録スクリプト
+
+- 評価・フィードバック
+  - `success_rate`（継続/離脱ベース）
+  - `like_rate`（チャット対応者 or テスターによる 👍 / 👎）
+  - 総合スコアによるパターン優先度付け
+  - ランク S〜D の付与（使用優先度の目安）
+
+---
+
+### 2.2 今回はやらない / 後でよいもの（将来拡張）
+
+以下は **v1.0.0 では書かれていたが、MVP ではあえてやらない**（＝引き算した）要素。
+
+1. **LLM による詳細なユーザー反応シミュレーションの全面採用**
+   - 「ユーザー役を LLM に演じさせて success_probability を算出」
+   - → MVP では、ここは **オプション** とし、  
+     実績データ（success_rate + like_rate）を主とする。
+
+2. **反実仮想シナリオの自動大量生成 + 自動評価パイプライン**
+   - `generate_counterfactual_responses.py` による一括生成
+   - `simulate_user_reaction.py` による自動シミュレーション
+   - → 最初は「気になる離脱会話」だけをピックアップして  
+     *少数のケースを人間の目で見る* 運用から始める。
+
+3. **A/B テストの自動化・統計的有意差検定**
+   - パターンごとの自動スプリット配信と統計解析
+   - → ユーザー数が増えてからで十分。
+
+4. **週次 / 月次 レポート生成・ダッシュボード**
+   - 可視化は後回し。  
+   - まずは SQLite + 手動集計（軽いスクリプト）で足りる。
+
+5. **完全自動の夜間パイプライン（cron + シェル一発）**
+   - `prowrestling_learning_pipeline.sh` によるフル自動化
+   - → MVP では「必要なときに手で流す」運用で開始可能。
+
+6. **詳細な倫理・法務セクションのシステム側ロジックへの埋め込み**
+   - 利用規約・免責の文書は継続利用するが、
+   - 学習パイプラインには **直接関与しない** ので、設計書上は簡略化。
+
+---
+
+## 3. 全体アーキテクチャ（MVP 版）
+
+```text
+┌──────────────────────────────────────────┐
+│               VPS（本番環境）                │
+│  - LINE Bot Webhook                        │
+│  - LLM (gpt-4o)                            │
+│  - センシティブ判定 Layer 1〜5（簡易）       │
+│  - プロレスパターン DB 参照                 │
+│  - 会話ログ出力（systemd journal / file）   │
+└──────────────────────────────────────────┘
+                     │
+                     │ SSH / rsync 等でログ収集
+                     ▼
+┌──────────────────────────────────────────┐
+│             ローカル環境（学習側）            │
+│  1. ログ取り込み → `vps_conversations.db`    │
+│  2. 離脱会話検出                            │
+│  3. 反実仮想案の生成（必要な分だけ）          │
+│  4. 良さそうな案を人間が選別               │
+│  5. `prowrestling_patterns.db` に登録       │
+│  6. VPS へ DB を同期                        │
+└──────────────────────────────────────────┘
+
+4. センシティブ判定 + プロレス統合（MVP 版）
+4.1 クラス構造（簡略版）
+
+class SensitiveJudgmentSystem:
+    """
+    5層センシティブ判定 + プロレスパターン統合（MVP版）
+    """
+
+    def __init__(self):
+        self.layer1 = StaticNGWordFilter()
+        self.layer2 = ContextualNGWordFilter()
+        self.layer3 = PatternMatcher()
+        self.layer4 = LLMContextJudgment()  # 「じゃれ合い」「攻撃」「通常」
+        self.layer5 = WorldViewChecker()
+
+        self.prowrestling_db = ProwrestlingPatternDB()
+
+    def judge_and_respond(self, user_message: str, character: str) -> dict:
+        # --- Layer 1〜3: 静的フィルタ ---
+        if self.layer1.is_ng(user_message):
+            return {"action": "block", "reason": "static_ng"}
+
+        if self.layer2.is_ng(user_message):
+            return {"action": "block", "reason": "contextual_ng"}
+
+        if self.layer3.match_ng_pattern(user_message):
+            return {"action": "block", "reason": "pattern_ng"}
+
+        # --- Layer 4: 文脈判定 ---
+        context_type = self.layer4.judge(user_message)
+        # "じゃれ合い" | "攻撃" | "通常"
+
+        if context_type == "攻撃":
+            return {"action": "block", "reason": "attack"}
+
+        # --- プロレスパターン DB からの参照 ---
+        if context_type == "じゃれ合い":
+            best_pattern = self.prowrestling_db.find_best_match(
+                user_message=user_message,
+                character=character,
+                success_rate_threshold=0.7,
+            )
+            if best_pattern:
+                return {
+                    "action": "respond",
+                    "response": best_pattern["bot_response"],
+                    "pattern_id": best_pattern["pattern_id"],
+                    "source": "prowrestling_db",
+                }
+
+        # --- LLM フォールバック ---
+        response = self.generate_response(user_message, character, context_type)
+
+        # --- Layer 5: 世界観チェック ---
+        if not self.layer5.is_valid(response):
+            response = self.layer5.correct(response)
+
+        return {
+            "action": "respond",
+            "response": response,
+            "pattern_id": None,
+            "source": "llm_generated",
+        }
+
+5. DB 設計（フィードバック統合版）
+5.1 プロレスパターン DB（prowrestling_patterns.db）
+テーブル: prowrestling_patterns
+
+v1.0.0 に対する差分を反映した定義
+
+
+CREATE TABLE IF NOT EXISTS prowrestling_patterns (
+    pattern_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- パターン情報
+    user_message_type TEXT NOT NULL,
+    user_message_example TEXT NOT NULL,
+    bot_response TEXT NOT NULL,
+    bot_response_type TEXT NOT NULL,
+    character TEXT NOT NULL,
+
+    -- 実績データ
+    used_count INTEGER DEFAULT 0,
+    success_count INTEGER DEFAULT 0,
+    failure_count INTEGER DEFAULT 0,
+    success_rate REAL GENERATED ALWAYS AS (
+        CASE
+            WHEN (success_count + failure_count) > 0
+            THEN CAST(success_count AS REAL) / (success_count + failure_count)
+            ELSE 0.0
+        END
+    ) STORED,
+
+    -- 👍 / 👎 フィードバック（★今回追加）
+    like_count INTEGER DEFAULT 0,
+    dislike_count INTEGER DEFAULT 0,
+    like_rate REAL GENERATED ALWAYS AS (
+        CASE 
+            WHEN (like_count + dislike_count) > 0
+            THEN CAST(like_count AS REAL) / (like_count + dislike_count)
+            ELSE 0.0
+        END
+    ) STORED,
+
+    -- 反実仮想フラグ（MVPでは使っても使わなくてもよい）
+    is_counterfactual BOOLEAN DEFAULT 0,
+
+    -- メタ情報
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE(user_message_type, bot_response, character)
+);
+
+CREATE INDEX IF NOT EXISTS idx_character_success_rate
+    ON prowrestling_patterns(character, success_rate DESC);
+
+CREATE INDEX IF NOT EXISTS idx_message_type
+    ON prowrestling_patterns(user_message_type);
+
+
+5.2 使用ログテーブル（prowrestling_usage_log）
+
+CREATE TABLE IF NOT EXISTS prowrestling_usage_log (
+    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pattern_id INTEGER,
+
+    conversation_id TEXT,
+    user_id TEXT,
+    user_message TEXT,
+    bot_response TEXT,
+
+    user_reaction TEXT,
+    reaction_time_seconds INTEGER,
+    next_message_exists BOOLEAN,
+
+    -- NEW: フィードバック
+    --  1  = 👍
+    -- -1  = 👎
+    -- NULL = 未評価
+    feedback INTEGER,
+
+    character TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (pattern_id) REFERENCES prowrestling_patterns(pattern_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pattern_reaction
+    ON prowrestling_usage_log(pattern_id, user_reaction);
+
+CREATE INDEX IF NOT EXISTS idx_pattern_feedback
+    ON prowrestling_usage_log(pattern_id, feedback);
+
+
+6. フィードバック統合ロジック
+6.1 フィードバック登録（👍 / 👎）
+
+def record_usage_feedback(log_id: int, pattern_id: int, feedback: int):
+    """
+    feedback: 1 = 👍, -1 = 👎
+    """
+    if feedback not in (1, -1):
+        return
+
+    # usage_log を更新
+    cursor.execute(
+        "UPDATE prowrestling_usage_log SET feedback = ? WHERE log_id = ?",
+        (feedback, log_id),
+    )
+
+    # patterns 側の集計値を更新
+    if feedback == 1:
+        cursor.execute(
+            "UPDATE prowrestling_patterns "
+            "SET like_count = like_count + 1 WHERE pattern_id = ?",
+            (pattern_id,),
+        )
+    else:
+        cursor.execute(
+            "UPDATE prowrestling_patterns "
+            "SET dislike_count = dislike_count + 1 WHERE pattern_id = ?",
+            (pattern_id,),
+        )
+
+    conn.commit()
+
+
+6.2 総合評価スコア（改訂版）
+
+ProwrestlingPatternEvaluator の calculate_rank 前段に、
+総合スコア計算式 を以下のように定義する。
+
+def calculate_score(stats: dict, like_rate: float, confidence: float) -> float:
+    """
+    stats: {
+        'success_rate': float,
+        'prowrestling_rate': float,
+        'avg_reaction_time': float,
+        ...
+    }
+    like_rate: 0.0〜1.0
+    confidence: 0.0〜1.0
+    """
+    base_score = (
+        stats["success_rate"] * 0.45
+        + stats["prowrestling_rate"] * 0.25
+        + like_rate * 0.20
+        + (1.0 - stats["avg_reaction_time"] / 300.0) * 0.10
+    )
+
+    return base_score * confidence
+
+
+ランク付け自体は従来通り：
+
+def calculate_rank(score: float) -> str:
+    if score >= 0.80:
+        return "S"
+    elif score >= 0.70:
+        return "A"
+    elif score >= 0.60:
+        return "B"
+    elif score >= 0.50:
+        return "C"
+    else:
+        return "D"
+
+6.3 パターン選択時のスコア利用
+
+def find_best_match(self, user_message: str, character: str, success_rate_threshold: float = 0.7):
+    """
+    MVP版: DB内のスコアを使って単純に1件選ぶ
+    """
+
+    cursor.execute(
+        """
+        SELECT
+            pattern_id,
+            user_message_example,
+            bot_response,
+            success_rate,
+            like_rate,
+            -- 必要に応じて prowrestling_rate, avg_reaction_time, confidence も SELECT
+            success_rate AS sr,
+            like_rate AS lr
+        FROM prowrestling_patterns
+        WHERE character = ?
+          AND success_rate >= ?
+        ORDER BY
+            -- ここでは簡易版として success_rate と like_rate の線形結合を使用
+            (success_rate * 0.6 + like_rate * 0.4) DESC
+        LIMIT 1
+        """,
+        (character, success_rate_threshold),
+    )
+
+    row = cursor.fetchone()
+    if not row:
+        return None
+
+    return {
+        "pattern_id": row["pattern_id"],
+        "bot_response": row["bot_response"],
+        "success_rate": row["success_rate"],
+        "like_rate": row["like_rate"],
+    }
+※ 将来的にはここを calculate_score() ベースに差し替え可能。
+MVP では「簡単な ORDER BY でいいからまず動かす」ことを優先。
+
+7. 実装フェーズ（MVP 版の再整理）
+Phase 1: ログ収集 & 会話 DB 化
+
+vps_conversations.db の作成
+
+LINE Webhook のログから会話単位に切り出し
+
+離脱フラグ（user_left）と簡易 success / failure 定義
+
+Phase 2: 手動 + 部分的な反実仮想生成
+
+離脱会話一覧を出す
+
+気になるものを選んで、
+
+ローカル LLM or 自力で「こう返せばよかった案」を数パターン書く
+
+良さそうなものを prowrestling_patterns に登録
+
+Phase 3: VPS 連携 & プロレス応答の実戦投入
+
+Layer4判定で「じゃれ合い」になったときに限り
+
+find_best_match() → パターン返し
+
+なければ素直に LLM 生成にフォールバック
+
+Phase 4: 👍 / 👎 フィードバック収集
+
+テスター用 UI に簡単なフィードバックボタンを実装
+
+prowrestling_usage_log.feedback と like_count / dislike_count の更新
+
+Phase 5: スコア・ランクを見ながらパターン整理
+
+success_rate と like_rate を眺める
+
+S〜A ランクは積極採用
+
+D ランクは削除・修正候補として扱う
+
+8. まとめ
+
+元の v1.0.0 設計をベースにしつつ、
+「MVP で本当に必要な部分」と「後でよい部分」を切り分けた。
+
+サムズアップ / サムズダウンのフィードバックを DB と評価ロジックに統合し、
+「続きやすい返し」だけでなく「好かれる返し」も評価できるようにした。
+
+これにより、
+
+まずは小さく回して、
+
+実際のログとフィードバックに応じて
+
+プロレス人格を「育てていく」ための土台が整った。
+
+今後は、実際のログを見ながら、
+
+「この返しは success_rate は高いけど like_rate は低い」
+
+「これは人を選ぶけど刺さる」
+
+といった差を楽しみつつ、
+三姉妹や AIVtuber のキャラを作り込んでいくフェーズに入っていける。
+
