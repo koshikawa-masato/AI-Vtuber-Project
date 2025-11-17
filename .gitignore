@@ -184,3 +184,6 @@ scripts/test_mysql_*.py
 scripts/create_mysql_tables.py
 scripts/migrate_sqlite_to_mysql.py
 scripts/view_mysql_data.py
+
+# Internal deployment documentation
+docs/DEPLOY_*.md

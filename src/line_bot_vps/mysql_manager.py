@@ -313,3 +313,157 @@ class MySQLManager:
         except Exception as e:
             logger.error(f"トレンド情報取得失敗: {e}")
             return []
+
+    def save_feedback(
+        self,
+        user_id: str,
+        feedback_text: str
+    ) -> Optional[int]:
+        """フィードバックを保存
+
+        Args:
+            user_id: LINEユーザーID
+            feedback_text: フィードバック内容
+
+        Returns:
+            挿入されたレコードのID（失敗時はNone）
+        """
+        if not self.connection:
+            logger.error("MySQL未接続")
+            return None
+
+        try:
+            with self.connection.cursor() as cursor:
+                sql = """
+                    INSERT INTO feedback (user_id, feedback_text)
+                    VALUES (%s, %s)
+                """
+                cursor.execute(sql, (user_id, feedback_text))
+                self.connection.commit()
+                feedback_id = cursor.lastrowid
+                logger.info(f"✅ フィードバック保存: ID={feedback_id}")
+                return feedback_id
+
+        except Exception as e:
+            logger.error(f"フィードバック保存失敗: {e}")
+            self.connection.rollback()
+            return None
+
+    def get_user_mode(self, user_id: str) -> str:
+        """ユーザーの選択モードを取得
+
+        Args:
+            user_id: LINEユーザーID
+
+        Returns:
+            選択モード ('auto', 'botan', 'kasho', 'yuri')
+            レコードがない場合は 'auto'
+        """
+        if not self.connection:
+            logger.error("MySQL未接続")
+            return 'auto'
+
+        try:
+            with self.connection.cursor() as cursor:
+                sql = "SELECT selected_mode FROM sessions WHERE user_id = %s"
+                cursor.execute(sql, (user_id,))
+                result = cursor.fetchone()
+
+                if result and result.get('selected_mode'):
+                    return result['selected_mode']
+                else:
+                    return 'auto'
+
+        except Exception as e:
+            logger.error(f"モード取得失敗: {e}")
+            return 'auto'
+
+    def set_user_mode(self, user_id: str, mode: str) -> bool:
+        """ユーザーの選択モードを設定
+
+        Args:
+            user_id: LINEユーザーID
+            mode: 選択モード ('auto', 'botan', 'kasho', 'yuri')
+
+        Returns:
+            成功したらTrue
+        """
+        if not self.connection:
+            logger.error("MySQL未接続")
+            return False
+
+        try:
+            with self.connection.cursor() as cursor:
+                sql = """
+                    INSERT INTO sessions (user_id, selected_mode)
+                    VALUES (%s, %s)
+                    ON DUPLICATE KEY UPDATE selected_mode = VALUES(selected_mode)
+                """
+                cursor.execute(sql, (user_id, mode))
+                self.connection.commit()
+                logger.info(f"✅ モード設定: user_id={user_id[:8]}..., mode={mode}")
+                return True
+
+        except Exception as e:
+            logger.error(f"モード設定失敗: {e}")
+            self.connection.rollback()
+            return False
+
+    def get_feedback_state(self, user_id: str) -> str:
+        """フィードバック状態を取得
+
+        Args:
+            user_id: LINEユーザーID
+
+        Returns:
+            フィードバック状態 ('none', 'waiting')
+        """
+        if not self.connection:
+            logger.error("MySQL未接続")
+            return 'none'
+
+        try:
+            with self.connection.cursor() as cursor:
+                sql = "SELECT feedback_state FROM sessions WHERE user_id = %s"
+                cursor.execute(sql, (user_id,))
+                result = cursor.fetchone()
+
+                if result and result.get('feedback_state'):
+                    return result['feedback_state']
+                else:
+                    return 'none'
+
+        except Exception as e:
+            logger.error(f"フィードバック状態取得失敗: {e}")
+            return 'none'
+
+    def set_feedback_state(self, user_id: str, state: str) -> bool:
+        """フィードバック状態を設定
+
+        Args:
+            user_id: LINEユーザーID
+            state: フィードバック状態 ('none', 'waiting')
+
+        Returns:
+            成功したらTrue
+        """
+        if not self.connection:
+            logger.error("MySQL未接続")
+            return False
+
+        try:
+            with self.connection.cursor() as cursor:
+                sql = """
+                    INSERT INTO sessions (user_id, feedback_state)
+                    VALUES (%s, %s)
+                    ON DUPLICATE KEY UPDATE feedback_state = VALUES(feedback_state)
+                """
+                cursor.execute(sql, (user_id, state))
+                self.connection.commit()
+                logger.debug(f"フィードバック状態設定: {state}")
+                return True
+
+        except Exception as e:
+            logger.error(f"フィードバック状態設定失敗: {e}")
+            self.connection.rollback()
+            return False

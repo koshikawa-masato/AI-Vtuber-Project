@@ -1,5 +1,5 @@
 """
-クラウドLLMプロバイダー（OpenAI, Gemini対応）
+クラウドLLMプロバイダー（OpenAI, Gemini, Claude, xAI対応）
 
 VPS用: 高速・低コスト・30秒制約対応
 """
@@ -11,6 +11,8 @@ from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 import google.generativeai as genai
+import anthropic
+import requests
 
 load_dotenv()
 
@@ -21,7 +23,7 @@ PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 
 
 class CloudLLMProvider:
-    """クラウドLLMプロバイダー（OpenAI, Gemini対応）"""
+    """クラウドLLMプロバイダー（OpenAI, Gemini, Claude, xAI対応）"""
 
     def __init__(
         self,
@@ -34,7 +36,7 @@ class CloudLLMProvider:
         初期化
 
         Args:
-            provider: LLMプロバイダー（"openai", "gemini"）
+            provider: LLMプロバイダー（"openai", "gemini", "claude", "xai"）
             model: モデル名
             temperature: 温度パラメータ
             max_tokens: 最大トークン数
@@ -60,6 +62,23 @@ class CloudLLMProvider:
             genai.configure(api_key=api_key)
             self.client = genai.GenerativeModel(model)
             logger.info(f"✅ Gemini初期化完了: {model}")
+
+        elif provider == "claude":
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
+
+            self.client = anthropic.Anthropic(api_key=api_key)
+            logger.info(f"✅ Claude初期化完了: {model}")
+
+        elif provider == "xai":
+            api_key = os.getenv("XAI_API_KEY")
+            if not api_key:
+                raise ValueError("XAI_API_KEY not found in environment variables")
+
+            self.api_key = api_key
+            self.client = None  # xAIはREST APIのみ
+            logger.info(f"✅ xAI初期化完了: {model}")
 
         else:
             raise ValueError(f"Unsupported provider: {provider}")
@@ -120,6 +139,54 @@ class CloudLLMProvider:
                 )
 
                 result = response.text
+
+            elif self.provider == "claude":
+                # メッセージ構築
+                messages = []
+                if conversation_history:
+                    messages.extend(conversation_history)
+                messages.append({"role": "user", "content": prompt})
+
+                # デバッグ: Claude API呼び出しパラメータ確認
+                logger.info(f"🔍 Claude API呼び出し: model={self.model_name}, system_prompt={len(system_prompt) if system_prompt else 0}文字, messages={len(messages)}件")
+
+                # Claude API呼び出し
+                response = self.client.messages.create(
+                    model=self.model_name,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                    system=system_prompt if system_prompt else "",
+                    messages=messages
+                )
+
+                result = response.content[0].text
+
+            elif self.provider == "xai":
+                # メッセージ構築
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                if conversation_history:
+                    messages.extend(conversation_history)
+                messages.append({"role": "user", "content": prompt})
+
+                # xAI API呼び出し（REST API）
+                url = "https://api.x.ai/v1/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "messages": messages,
+                    "model": self.model_name,
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens
+                }
+
+                response = requests.post(url, json=payload, headers=headers, timeout=60)
+                response.raise_for_status()
+                result_json = response.json()
+                result = result_json["choices"][0]["message"]["content"]
 
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
@@ -183,10 +250,32 @@ class CloudLLMProvider:
 
         # 今日のトレンド情報を追加
         if daily_trends:
+            def format_content(content):
+                """contentを文字列化（Grok形式/RSS形式に対応）"""
+                if isinstance(content, dict):
+                    # Grok形式: {"summary": "...", "events": [...]}
+                    if 'summary' in content:
+                        return content['summary'][:200]
+                    # RSS形式: {"category": "...", "items": [...]}
+                    elif 'items' in content and len(content['items']) > 0:
+                        first_item = content['items'][0]
+                        title = first_item.get('title', '')
+                        summary = first_item.get('summary', '')
+                        return f"{title} - {summary}"[:200] if summary else title[:200]
+                    else:
+                        return str(content)[:200]
+                elif isinstance(content, str):
+                    return content[:200]
+                else:
+                    return str(content)[:200]
+
             trends_text = "\n".join([
-                f"- {trend.get('topic', 'トレンド')}: {trend.get('content', '')[:200]}..."
+                f"- {trend.get('topic', 'トレンド')}: {format_content(trend.get('content', ''))}..."
                 for trend in daily_trends
             ])
+
+            # デバッグ: トレンド情報の内容を確認
+            logger.info(f"📰 トレンド情報:\n{trends_text}")
 
             # プロンプトファイルから読み込み
             trends_prompt_file = PROMPTS_DIR / "daily_trends_system_prompt.txt"
@@ -213,6 +302,10 @@ class CloudLLMProvider:
 - 中国語の文字が含まれていないか？
 - 英語（固有名詞以外）が含まれていないか？
 - 全て日本語で書かれているか？"""
+
+        # デバッグ: システムプロンプト確認
+        logger.info(f"🔍 システムプロンプト構築完了: キャラ={character_name}, 長さ={len(system_prompt)}文字")
+        logger.debug(f"📝 システムプロンプト内容:\n{system_prompt[:500]}...")
 
         return self.generate(
             prompt=user_message,
