@@ -16,9 +16,13 @@ logger = logging.getLogger(__name__)
 class LearningLogSystemMySQL:
     """学習ログシステム（MySQL版）"""
 
-    def __init__(self):
-        """初期化"""
-        self.mysql_manager = MySQLManager()
+    def __init__(self, mysql_manager: Optional[MySQLManager] = None):
+        """初期化
+
+        Args:
+            mysql_manager: 外部から渡されるMySQLManager（Noneの場合は新規作成）
+        """
+        self.mysql_manager = mysql_manager if mysql_manager else MySQLManager()
         self.connected = False
         logger.info("✅ 学習ログシステム初期化（MySQL）")
 
