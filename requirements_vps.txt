@@ -20,5 +20,7 @@ python-dotenv==1.0.0
 requests==2.31.0
 
 # データベース（SQLite標準ライブラリを使用）
+# PostgreSQL
+psycopg2-binary==2.9.9
 
 # ログ出力（標準ライブラリを使用）

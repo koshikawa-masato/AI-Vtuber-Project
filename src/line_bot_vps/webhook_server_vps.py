@@ -25,14 +25,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .cloud_llm_provider import CloudLLMProvider
-from .learning_log_system_mysql import LearningLogSystemMySQL
-from .session_manager_mysql import SessionManagerMySQL
-from .mysql_manager import MySQLManager
+from .learning_log_system_postgresql import LearningLogSystemPostgreSQL
+from .session_manager_postgresql import SessionManagerPostgreSQL
+from .postgresql_manager import PostgreSQLManager
+from .rag_search_system import RAGSearchSystem
 from .terms_flex_message import create_terms_flex_message
 from .help_flex_message import create_help_flex_message
 from .stats_flex_message import create_stats_flex_message
 from .feedback_notifier import FeedbackNotifier
 from .auto_character_selector import AutoCharacterSelector
+from .integrated_judgment_engine import IntegratedJudgmentEngine
+from .adaptive_response_generator import AdaptiveResponseGenerator
+from .user_memories_manager import UserMemoriesManager
 
 # 既存のモジュールを活用
 import sys
@@ -118,17 +122,17 @@ llm_provider = CloudLLMProvider(
 )
 logger.info(f"✅ CloudLLMProvider初期化完了（{VPS_LLM_PROVIDER}: {VPS_LLM_MODEL}）")
 
-# グローバルなMySQLManager（トンネルを1本に統一）
-mysql_manager = MySQLManager()
-logger.info("✅ MySQLManager初期化完了")
+# グローバルなPostgreSQLManager（VPS内localhost接続）
+pg_manager = PostgreSQLManager()
+logger.info("✅ PostgreSQLManager初期化完了")
 
-# 学習ログシステム初期化（MySQL版）
-learning_log_system = LearningLogSystemMySQL(mysql_manager=mysql_manager)
-logger.info("✅ LearningLogSystemMySQL初期化完了")
+# 学習ログシステム初期化（PostgreSQL版）
+learning_log_system = LearningLogSystemPostgreSQL(pg_manager=pg_manager)
+logger.info("✅ LearningLogSystemPostgreSQL初期化完了")
 
-# セッション管理システム初期化（MySQL版）
-session_manager = SessionManagerMySQL(mysql_manager=mysql_manager)
-logger.info("✅ SessionManagerMySQL初期化完了")
+# セッション管理システム初期化（PostgreSQL版）
+session_manager = SessionManagerPostgreSQL(pg_manager=pg_manager)
+logger.info("✅ SessionManagerPostgreSQL初期化完了")
 
 # プロンプト管理システム初期化
 prompt_manager = PromptManager()
@@ -139,8 +143,24 @@ feedback_notifier = FeedbackNotifier(channel_access_token=CHANNEL_ACCESS_TOKEN)
 logger.info("✅ FeedbackNotifier初期化完了（Messaging API）")
 
 # 三姉妹自動選択システム初期化
-auto_character_selector = AutoCharacterSelector(mysql_manager=mysql_manager)
+auto_character_selector = AutoCharacterSelector(mysql_manager=pg_manager)
 logger.info("✅ AutoCharacterSelector初期化完了")
+
+# RAG検索システム初期化（PostgreSQL + pgvector）
+rag_search_system = RAGSearchSystem(pg_manager=pg_manager)
+logger.info("✅ RAGSearchSystem初期化完了（PostgreSQL + pgvector）")
+
+# 統合判定エンジン初期化（7層防御）
+integrated_judgment_engine = IntegratedJudgmentEngine(pg_manager=pg_manager)
+logger.info("✅ IntegratedJudgmentEngine初期化完了（7層防御）")
+
+# 臨機応変な応答生成システム初期化
+adaptive_response_generator = AdaptiveResponseGenerator()
+logger.info("✅ AdaptiveResponseGenerator初期化完了")
+
+# ユーザー記憶管理システム初期化
+user_memories_manager = UserMemoriesManager(pg_manager=pg_manager)
+logger.info("✅ UserMemoriesManager初期化完了")
 
 # ========================================
 # アプリケーションライフサイクル
@@ -149,18 +169,30 @@ logger.info("✅ AutoCharacterSelector初期化完了")
 @app.on_event("startup")
 async def startup_event():
     """アプリケーション起動時の処理"""
-    # MySQL接続（SSHトンネル作成）
-    if mysql_manager.connect():
-        logger.info("🎉 MySQL接続成功（SSHトンネル確立）")
+    # PostgreSQL接続（VPS内localhost接続）
+    if pg_manager.connect():
+        logger.info("🎉 PostgreSQL接続成功（localhost）")
+        # RAG検索システムもpg_managerを共有しているため自動的に使用可能
+        rag_search_system.connect()
+        logger.info("✅ RAG検索システム接続完了")
+        # 統合判定エンジンもpg_managerを共有
+        integrated_judgment_engine.connect()
+        logger.info("✅ 統合判定エンジン接続完了")
+        # ユーザー記憶管理システムもpg_managerを共有
+        user_memories_manager.connect()
+        logger.info("✅ ユーザー記憶管理システム接続完了")
     else:
-        logger.error("❌ MySQL接続失敗")
+        logger.error("❌ PostgreSQL接続失敗")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """アプリケーション終了時の処理"""
-    # MySQL切断（SSHトンネルクローズ）
-    mysql_manager.disconnect()
-    logger.info("👋 MySQL接続を切断しました")
+    # PostgreSQL切断
+    user_memories_manager.disconnect()
+    integrated_judgment_engine.disconnect()
+    rag_search_system.disconnect()
+    pg_manager.disconnect()
+    logger.info("👋 PostgreSQL接続を切断しました")
 
 # ========================================
 # キャラクター設定
@@ -215,14 +247,14 @@ def verify_signature(body: bytes, signature: str) -> bool:
     return hmac.compare_digest(signature, expected_signature)
 
 
-def generate_response(
+async def generate_response(
     character: str,
     user_message: str,
     user_id: str,
     conversation_history: Optional[list] = None
 ) -> tuple[str, float]:
     """
-    応答生成
+    応答生成（統合判定エンジン統合版）
 
     Args:
         character: キャラクター名
@@ -236,36 +268,138 @@ def generate_response(
     start_time = time.time()
 
     try:
+        # 統合判定（7層防御）
+        judgment = None
+        try:
+            judgment = await integrated_judgment_engine.judge(
+                user_message=user_message,
+                user_id=user_id,
+                character=character
+            )
+            logger.info(f"🛡️ 統合判定完了: playful={judgment['playful']['is_playful']}, "
+                       f"sensitive={judgment['sensitive']['level']}")
+        except Exception as e:
+            logger.warning(f"⚠️ 統合判定失敗（スキップ）: {e}")
+
         # プロンプト取得（世界観ルール + キャラクタープロンプト）
         character_prompt = prompt_manager.get_combined_prompt(character)
+
+        # 応答スタイル指示を追加（個性に基づく）
+        if judgment:
+            style_instruction = adaptive_response_generator.get_response_style_instruction(
+                judgment['personality']
+            )
+            character_prompt += f"\n\n{style_instruction}"
 
         # TODO: Phase D記憶検索統合（copy_robot_memory.dbから）
         memories = None  # 将来的に実装
 
-        # 今日のトレンド情報を取得（MySQLから）※グローバルmysql_managerを使用
+        # RAG検索: 学習済み知識を検索（類似度0.6以上）
+        learned_knowledge = []
+        try:
+            learned_knowledge = rag_search_system.search_learned_knowledge(
+                character=character,
+                query=user_message,
+                top_k=5,
+                similarity_threshold=0.6
+            )
+
+            # RAG検索結果をプロンプトに追加
+            if learned_knowledge:
+                logger.info(f"📚 RAG: {len(learned_knowledge)}件の関連知識を検出")
+                rag_context = "\n\n【参考知識（過去に学習した情報）】\n"
+                for k in learned_knowledge:
+                    rag_context += f"- {k['word']}: {k['meaning']}\n"
+
+                # システムプロンプトにRAG情報を追加
+                character_prompt += rag_context
+        except Exception as e:
+            logger.warning(f"⚠️ RAG検索失敗（スキップ）: {e}")
+
+        # RAG検索: ユーザー記憶を検索
+        user_memories = []
+        try:
+            user_memories = user_memories_manager.search(
+                user_id=user_id,
+                character=character,
+                query=user_message,
+                top_k=5,
+                similarity_threshold=0.6
+            )
+
+            # ユーザー記憶をプロンプトに追加
+            if user_memories:
+                logger.info(f"💾 user_memories: {len(user_memories)}件のユーザー記憶を検出")
+                user_context = "\n\n【このユーザーについて覚えていること】\n"
+                for m in user_memories:
+                    user_context += f"- {m['memory_text']}\n"
+
+                # システムプロンプトにユーザー記憶を追加
+                character_prompt += user_context
+        except Exception as e:
+            logger.warning(f"⚠️ user_memories検索失敗（スキップ）: {e}")
+
+        # 今日のトレンド情報を取得（PostgreSQLから）※グローバルpg_managerを使用
         daily_trends = None
         try:
-            if mysql_manager.connection or mysql_manager.connect():
-                daily_trends = mysql_manager.get_recent_trends(character=character, limit=3)
+            if pg_manager.connection or pg_manager.connect():
+                daily_trends = pg_manager.get_recent_trends(character=character, limit=3)
                 if daily_trends:
                     logger.info(f"✅ トレンド情報取得: {len(daily_trends)}件")
         except Exception as e:
             logger.warning(f"⚠️ トレンド情報取得失敗（スキップ）: {e}")
 
-        # LLM生成（会話履歴 + トレンド情報を含む）
-        response = llm_provider.generate_with_context(
-            user_message=user_message,
-            character_name=CHARACTERS[character]["name"],
-            character_prompt=character_prompt,
-            memories=memories,
-            daily_trends=daily_trends,
-            conversation_history=conversation_history,
-            metadata={
-                "user_id": user_id,
-                "character": character,
-                "platform": "LINE_VPS"
-            }
-        )
+        # 適応的応答生成（プロレス・誤情報への対応）
+        adaptive_response = None
+        if judgment:
+            try:
+                adaptive_response = await adaptive_response_generator.generate(
+                    user_message=user_message,
+                    judgment=judgment,
+                    character=character
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ 適応的応答生成失敗（スキップ）: {e}")
+
+        # 適応的応答がある場合はそれを返す
+        if adaptive_response:
+            logger.info(f"💬 適応的応答を使用")
+            response = adaptive_response
+        else:
+            # LLM生成（会話履歴 + トレンド情報を含む）
+            response = llm_provider.generate_with_context(
+                user_message=user_message,
+                character_name=CHARACTERS[character]["name"],
+                character_prompt=character_prompt,
+                memories=memories,
+                daily_trends=daily_trends,
+                conversation_history=conversation_history,
+                metadata={
+                    "user_id": user_id,
+                    "character": character,
+                    "platform": "LINE_VPS"
+                }
+            )
+
+        # 応答後処理: 個性更新 + 記憶保存
+        if judgment:
+            try:
+                # 個性を更新
+                await integrated_judgment_engine.update_personality_from_judgment(
+                    user_id=user_id,
+                    judgment=judgment,
+                    interaction_positive=True  # TODO: 応答の評価
+                )
+
+                # ユーザー記憶を抽出・保存
+                await user_memories_manager.extract_and_save(
+                    user_id=user_id,
+                    user_message=user_message,
+                    bot_response=response,
+                    character=character
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ 応答後処理失敗（スキップ）: {e}")
 
         elapsed_time = time.time() - start_time
 
@@ -445,7 +579,7 @@ async def webhook(request: Request):
             elif postback_data.startswith("action=set_mode&mode="):
                 mode = postback_data.split("mode=")[1]
                 if mode in ["auto", "botan", "kasho", "yuri"]:
-                    mysql_manager.set_user_mode(user_id, mode)
+                    pg_manager.set_user_mode(user_id, mode)
 
                     # モード別確認メッセージ
                     if mode == "auto":
@@ -489,7 +623,7 @@ async def webhook(request: Request):
 
             # フィードバック受付
             elif postback_data == "action=feedback":
-                mysql_manager.set_feedback_state(user_id, "waiting")
+                pg_manager.set_feedback_state(user_id, "waiting")
 
                 reply_message = (
                     "📝 フィードバックをお待ちしています！\n\n"
@@ -629,18 +763,18 @@ async def webhook(request: Request):
                 user_message = event.get("message", {}).get("text", "")
 
                 # フィードバック待ち状態の確認
-                feedback_state = mysql_manager.get_feedback_state(user_id)
+                feedback_state = pg_manager.get_feedback_state(user_id)
 
                 if feedback_state == "waiting":
                     # フィードバック処理
                     if user_message.lower() in ["キャンセル", "cancel"]:
                         # キャンセル
-                        mysql_manager.set_feedback_state(user_id, "none")
+                        pg_manager.set_feedback_state(user_id, "none")
                         bot_response = "フィードバックをキャンセルしました。"
                     else:
                         # フィードバック保存
-                        mysql_manager.save_feedback(user_id, user_message)
-                        mysql_manager.set_feedback_state(user_id, "none")
+                        pg_manager.save_feedback(user_id, user_message)
+                        pg_manager.set_feedback_state(user_id, "none")
 
                         # Messaging API で開発者に通知
                         feedback_notifier.send_feedback_notification(user_id, user_message)
@@ -680,7 +814,7 @@ async def webhook(request: Request):
 
                 # 通常メッセージ処理
                 # モード取得（auto / botan / kasho / yuri）
-                selected_mode = mysql_manager.get_user_mode(user_id)
+                selected_mode = pg_manager.get_user_mode(user_id)
 
                 if selected_mode == "auto":
                     # 自動モード: 三姉妹で親和性スコアリング
@@ -696,20 +830,17 @@ async def webhook(request: Request):
 
                 logger.info(f"📩 メッセージ受信: {character} <- {user_message[:30]}...")
 
-                # 会話履歴を取得（過去10件）
+                # 会話履歴を取得（過去100件 - Claude Haiku 3.5の長いコンテキストを活用）
                 conversation_history = session_manager.get_conversation_history(
                     user_id=user_id,
                     character=character,
-                    limit=10
+                    limit=100
                 )
                 if conversation_history:
                     logger.info(f"📚 会話履歴取得: {len(conversation_history)}件")
 
-                # TODO: Phase 5センシティブ判定（軽量版）
-                # 現在は省略、将来的に実装
-
-                # 応答生成（会話履歴を含む）
-                bot_response, response_time = generate_response(
+                # 応答生成（統合判定エンジン統合版、会話履歴を含む）
+                bot_response, response_time = await generate_response(
                     character=character,
                     user_message=user_message,
                     user_id=user_id,
@@ -751,18 +882,17 @@ async def webhook(request: Request):
                 except Exception as e:
                     logger.error(f"❌ 学習ログ保存エラー（SQLite）: {e}")
 
-                # 学習ログ保存（MySQL）
+                # 学習ログ保存（PostgreSQL）
                 try:
-                    if mysql_manager.connection or mysql_manager.connect():
-                        mysql_manager.save_learning_log(
-                            user_id=user_id,  # MySQLには生のuser_idを保存
-                            character=character,
-                            user_message=user_message,
-                            bot_response=bot_response,
-                            response_time=response_time
-                        )
+                    learning_log_system.save_log(
+                        character=character,
+                        user_id=user_id,
+                        user_message=user_message,
+                        bot_response=bot_response,
+                        response_time=response_time
+                    )
                 except Exception as e:
-                    logger.error(f"❌ 学習ログ保存エラー（MySQL）: {e}")
+                    logger.error(f"❌ 学習ログ保存エラー（PostgreSQL）: {e}")
 
                 # 最終メッセージ時刻を更新（selected_characterも更新）
                 session_manager.update_last_message_time(user_id, character)
