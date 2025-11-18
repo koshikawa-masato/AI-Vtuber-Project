@@ -6,7 +6,7 @@
 
 import logging
 from typing import Dict, Optional
-from .mysql_manager import MySQLManager
+from .postgresql_manager import PostgreSQLManager
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +50,11 @@ CHARACTER_KEYWORDS = {
 class AutoCharacterSelector:
     """三姉妹自動選択クラス"""
 
-    def __init__(self, mysql_manager: MySQLManager):
+    def __init__(self, mysql_manager: PostgreSQLManager):
         """初期化
 
         Args:
-            mysql_manager: MySQLManagerインスタンス
+            mysql_manager: PostgreSQLManagerインスタンス（パラメータ名は互換性のため維持）
         """
         self.mysql_manager = mysql_manager
 
