@@ -947,5 +947,118 @@ Phase G（配信統合）:   ⬜⬜⬜ 未着手
 
 ---
 
+## Phase 7-9: user_memories運用・最適化システム（設計完了）
+
+### Phase 7-9: 運用データ収集から最適化まで 📋
+
+**設計完了日**: 2025-11-18
+**実装開始予定**: Phase 6.5.5安定稼働後
+
+**目的**: Phase 6.5.5で実装したuser_memoriesシステムの運用・最適化
+
+**設計プロセス**:
+1. **初期設計書作成**: 午後の日記からアイデア抽出、5週間5フェーズの計画
+2. **多角的レビュー**:
+   - **チャッピー（GPT-5.1）**: MVP志向、引き算思考、過剰設計の指摘
+   - **ロキ（Grok）**: 技術トレンド調査、X検索によるエビデンス
+   - **第三者Claude**: 議論書のメタレビュー、見落とし指摘
+3. **議論書統合**: 両者のレビューを比較・統合、7つの論点抽出
+4. **議論書改訂（v2）**: Claude Opus 4.1使用、全8セクション追加（$1.30）
+5. **設計書改訂**: クロコ（私）による手動改訂、958行の大幅改訂
+
+**Phase構成（改訂版）**:
+- **Phase 7**: ログ/メトリクス基盤整備（1週間）
+  - user_memories関連ログ項目整理
+  - 基本メトリクス集計スクリプト
+  - **明示的フィードバック（「覚えててくれた！」ボタン）追加**
+  - pgBadger導入
+  - A/Bテスト簡易フレームワーク
+  - データベースバックアップ（pg_dump + S3）
+  - **家族フィードバック収集プロトコル開始**
+
+- **Phase 8**: 初期チューニング＋暫定コスト最適化（2週間）
+  - 閾値調整（trust_score / 類似度閾値 / playfulness更新条件）
+  - Embedding/Grok呼び出し頻度削減
+  - Embeddingキャッシュ（DB側、embedding列）
+  - playfulness_score収束期間を4週間に延長
+  - **character_interest_scores実装**
+
+- **Phase 9**: パフォーマンス＋テンプレート拡充（2週間）
+  - 実測値に基づくDBチューニング
+  - 必要に応じてキャッシュ/インデックス追加
+  - テンプレート拡充（問題箇所優先）
+  - **ReSing MAX統合の準備（memory_type拡張）**
+
+**主要な設計判断（レビュー反映）**:
+- Phase構成: 5フェーズ → 3フェーズに集約（MVP志向）
+- IVFFlat: 初期から導入（lists=10） → Flatから開始、実測後検討
+- 記憶引用率: 30%以上 → 20%以上（段階的に30%へ）
+- playfulness_score収束: 2週間 → 4週間（X上のVTuber事例）
+- 総運用コスト: $20/月 → $35/月（API$10+VPS$24、現実的な再設定）
+- Redis: Phase 10 → 「将来検討」に格下げ（10,000ユーザー超で検討）
+- パーティショニング: Phase 10 → 完全に後回し（20,000ユーザー超）
+
+**新機能追加（レビューで指摘）**:
+- **character_interest_scores**: 三姉妹の性格差による記憶の重み付け
+  - 牡丹: VTuber話題に高興味度、音楽は低興味度
+  - Kasho: 音楽話題に高興味度、VTuberは低興味度
+  - ユリ: サブカル（アニメ、ラノベ）話題に高興味度
+- **memory_type拡張**: ReSing MAX統合準備（'music_preference'追加）
+- **家族フィードバック収集プロトコル**: 体系的なフィードバック収集
+
+**工数見積もり**:
+- Phase 7: 5営業日
+- Phase 8: 10営業日
+- Phase 9: 10営業日
+- **合計: 25営業日（約5週間）**
+
+**評価指標**:
+- 記憶引用率: 20%以上（Phase 7）→ 25%（Phase 8）→ 30%（Phase 9）
+- 記憶適切性: 80%以上
+- playfulness_score収束: 4週間以内
+- APIコスト: $10以下/月
+- インフラコスト（VPS）: $24/月
+- 総運用コスト: $35以下/月
+
+**技術的負債の管理**:
+- Redis: 10,000ユーザー or レイテンシがX秒超過で検討
+- パーティショニング: 20,000ユーザー超で検討
+- IVFFlat: 実測で問題が出たら導入（lists ≈ sqrt(N) = 100）
+- ローカルEmbedding: コスト削減優先度が高まったら検討
+
+**失敗シナリオと対策**:
+- シナリオA: 記憶引用率が10%未満 → 類似度閾値調整、重要度スコア見直し
+- シナリオB: ユーザーが「覚え間違い」にイライラ → 誤情報訂正機能強化
+- シナリオC: Grok APIがレート制限で使えない → キャッシュ強化、フォールバック
+
+**設計書**:
+- `docs/05_design/user_memories_運用・最適化システム_設計書.md`（958行、改訂版）
+- `docs/05_design/user_memories_運用・最適化システム_設計書_v1_backup.md`（627行、初版バックアップ）
+
+**レビュープロセス記録**:
+- `docs/ai_collaboration/user_memories_design_review_discussion.md`（議論書、オリジナル版）
+- `docs/ai_collaboration/user_memories_design_review_discussion_v2.md`（議論書、改訂版、Claude Opus 4.1使用）
+- `docs/ai_collaboration/user_memories_design_review_discussion_review.md`（第三者レビュー）
+- `docs/ai_collaboration/to_chatgpt.md`、`docs/ai_collaboration/from_chatgpt.md`（チャッピーレビュー）
+- `docs/ai_collaboration/to_grok.md`、`docs/ai_collaboration/from_grok.md`（ロキレビュー）
+
+**コミット**:
+- e7bf2f3: ドキュメント更新（+544行/-92行）
+- f6aab71: 設計書作成・改訂（+6,306行/-254行）
+
+**複数AI協働の実践**:
+- クロコ（Claude Code）: 設計書作成、統合作業
+- チャッピー（ChatGPT GPT-5.1）: 第三者視点、MVP志向、批判的思考
+- ロキ（Grok）: 技術トレンド調査、X検索によるエビデンス
+- 第三者Claude: メタレビュー、見落とし指摘
+- Claude Opus 4.1（API）: 高度な推論タスク、長文統合（$1.30）
+- 越川さん（人間）: 最終判断、方針決定
+
+**状態**: ✅ 設計完了、❌ 実装未着手
+
+---
+
 **最終更新**: 2025-11-18
-**更新理由**: Phase 6.5.5（user_memories統合防御システム）実装完了・VPS本番稼働開始を反映
+**更新理由**:
+- Phase 6.5.5（user_memories統合防御システム）実装完了・VPS本番稼働開始を反映
+- Phase 7-9（user_memories運用・最適化システム）設計完了を追加
