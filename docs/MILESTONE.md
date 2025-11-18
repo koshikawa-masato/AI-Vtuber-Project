@@ -295,6 +295,141 @@
 
 ---
 
+## Phase 6.5.5: user_memories統合防御システム実装 ✅
+
+### Phase 6.5.5: ユーザー個別記憶・個性学習・統合防御システム（VPS本番稼働中）
+
+**実装日**: 2025-11-18
+
+**目的**: ユーザーとの関係性を構築し、臨機応変な応答を実現する7層統合防御システム
+
+**設計思想**:
+- **ユーザー個別記憶**: RAG検索でユーザーについて学んだことを記憶・活用
+- **ファクトチェック**: Grok APIによる誤情報の自動検出・訂正
+- **個性学習**: プロレス傾向・信頼度・関係性レベルの自動学習
+- **臨機応変な応答**: ユーザーの個性に合わせた応答生成
+
+**実装内容（Phase 1-7）**:
+
+#### Phase 1: データベース構築 ✅
+- PostgreSQL + pgvector統合
+- 4テーブル新設:
+  - `user_memories`: ユーザーについて学んだ記憶
+  - `user_personality`: ユーザーの個性（プロレス傾向、信頼度、関係性レベル）
+  - `learning_history`: 学習履歴
+  - `user_trust_history`: 信頼度の変遷記録
+- ベクトル検索用IVFFlat インデックス作成
+
+#### Phase 2: user_memories基本機能 ✅
+- **RAG検索システム**:
+  - OpenAI Embeddings API統合（text-embedding-3-small、1536次元）
+  - コサイン類似度による記憶検索
+  - user_memoriesとlearned_knowledgeの統合検索
+- **記憶抽出システム**:
+  - 会話から自動的に記憶を抽出
+  - 記憶タイプの分類（preference, fact, experience, relationship, goal, emotion）
+
+#### Phase 3: ファクトチェック統合 ✅
+- **Grok API統合**:
+  - ユーザーが教えてくれた情報の事実性を検証
+  - 誤情報の検出と正しい情報の提示
+- **重要な話題の特別処理**:
+  - 医療、健康、金融、法律などの重要トピックを検出
+  - プロレス判定を無効化し、真面目に対応
+
+#### Phase 4: 個性学習システム ✅
+- **プロレス傾向学習（playfulness_score）**:
+  - 0.0（真面目）〜 1.0（プロレス大好き）
+  - プロレス会話 vs 真面目会話の比率から算出
+- **信頼度学習（trust_score）**:
+  - 0.0（不信）〜 1.0（完全信頼）
+  - 正しい情報 vs 誤情報の比率から算出
+- **関係性レベル（relationship_level）**:
+  - 1（初対面）〜 10（親友）
+  - 会話回数とポジティブ度から算出
+
+#### Phase 5: 統合判定エンジン ✅
+- **7層防御アーキテクチャ**:
+  - Layer 1-5: センシティブ判定（Phase 5既存システム）
+  - Layer 6: ファクトチェック（Grok）← NEW
+  - Layer 7: 個性学習（user_memories）← NEW
+
+#### Phase 6: 臨機応変な応答生成 ✅
+- **ユーザーごとの最適応答**:
+  - プロレス vs 真面目の判定
+  - 関係性レベルに応じた口調変化
+- **キャラクター別応答テンプレート**:
+  - 牡丹: 「ちょっと〜！17歳だって！マジウケる〜笑」
+  - Kasho: 「それ、17歳ですよ...冗談キツいですね笑」
+  - ユリ: 「え、17歳だよ？...あ、冗談か！笑」
+
+#### Phase 7: LINE Bot統合 ✅
+- `webhook_server_vps.py` への統合完了
+- VPS本番環境デプロイ完了（XServer VPS）
+- すべてのコンポーネントが正常動作
+
+**テスト結果**: 7/7 PASS（統合テスト完全合格）
+- ✅ Phase 1: データベース構築
+- ✅ Phase 2: user_memories基本機能
+- ✅ Phase 3: ファクトチェック
+- ✅ Phase 4: 個性学習システム
+- ✅ Phase 5: 統合判定エンジン
+- ✅ Phase 6: 臨機応変な応答生成
+- ✅ Phase 7: LINE Bot統合
+
+**セキュリティ対応**:
+- ❌ PostgreSQL接続情報のハードコーディング発見
+- ✅ すべてのDB接続情報を環境変数から取得
+- ✅ デフォルト値を削除（localhost とポート番号のみ許可）
+- ✅ API キー: すべて環境変数
+- ✅ プロンプト: ハードコーディングなし
+- ✅ ユーザーID: ログでは `[:8]` のみ出力（プライバシー保護）
+- ✅ SQL: パラメータ化クエリ（インジェクション対策）
+
+**実装規模**:
+- 総追加行数: 7,089行
+- 総削除行数: 447行
+- 正味増加: 6,642行
+- 変更ファイル: 43ファイル
+- 新規ファイル: 9ファイル
+
+**実装ファイル**:
+- `src/line_bot_vps/postgresql_manager.py`: PostgreSQL管理
+- `src/line_bot_vps/user_memories_manager.py`: user_memories管理
+- `src/line_bot_vps/fact_checker.py`: Grokファクトチェック
+- `src/line_bot_vps/personality_learner.py`: 個性学習
+- `src/line_bot_vps/integrated_judgment_engine.py`: 7層統合判定
+- `src/line_bot_vps/adaptive_response_generator.py`: 適応的応答生成
+- `src/line_bot_vps/rag_search_system.py`: RAG検索
+- `scripts/setup_user_memories_tables.py`: DB初期化
+- `scripts/test_integrated_system.py`: 統合テスト
+
+**設計書**: `docs/05_design/user_memories_統合防御システム_設計書.md`
+
+**コミット**: be0b666 (2025-11-18 15:27)
+
+**状態**: ✅ 完了・本番稼働中（XServer VPS 162.43.4.11）
+
+**VPS稼働状況**:
+- ホスト: XServer VPS (162.43.4.11)
+- サービス: uvicorn + webhook_server_vps.py
+- PID: 48695（2025-11-18時点）
+- 既存データ: user_memories 5件、user_personality 3件、user_trust_history 6件
+
+**技術スタック**:
+- PostgreSQL + pgvector（ベクトル検索）
+- OpenAI Embeddings API（text-embedding-3-small）
+- Grok API（X.AI、grok-beta）
+- FastAPI（Webhookサーバー）
+- XServer VPS（本番環境）
+
+**Phase 6との関係**:
+- Phase 6-4実証実験の強化版
+- ユーザーとの対話から自動学習
+- 個性に応じた応答でユーザー体験向上
+
+---
+
 ## Phase D: 人間らしい記憶システム（設計完了、未実装）
 
 ### Phase D: 忘却・曖昧・想起の2層構造 🔄
@@ -812,5 +947,5 @@ Phase G（配信統合）:   ⬜⬜⬜ 未着手
 
 ---
 
-**最終更新**: 2025-11-12
-**更新理由**: Phase 6-1〜6-3完了、Phase 6-4実証実験開始を反映
+**最終更新**: 2025-11-18
+**更新理由**: Phase 6.5.5（user_memories統合防御システム）実装完了・VPS本番稼働開始を反映

@@ -5,7 +5,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
-[![Phase](https://img.shields.io/badge/Phase-1--5_Complete-green.svg)](https://github.com/koshikawa-masato/AI-Vtuber-Project)
+[![Phase](https://img.shields.io/badge/Phase-6.5.5_Complete-green.svg)](https://github.com/koshikawa-masato/AI-Vtuber-Project)
 
 ---
 
@@ -13,20 +13,112 @@
 
 牡丹（Botan）・Kasho・ユリ（Yuri）という3人のAI VTuberを育てるプロジェクト。
 
-**記憶製造機**（RAGシステム）により、**117のコアイベント + 18,498の日常記憶**を蓄積予定。
-**三姉妹システム**（Multi-Agent）により、自律的に討論・成長。
+**LINE Bot統合**により、三姉妹との対話が実現。毎日の会話を通じて関係性を構築。
+**動的知識獲得システム**（Grok × X検索 + RSS）により、最新情報を自動収集。
+**user_memories統合防御システム**（7層防御）により、ユーザーとの関係性を学習し、臨機応変な応答を実現。
 **品質保証システム**（Judge + Sensitive Check）により、安全で高品質な応答を実現。
 
 **これは「職人知識のAI化」の実践例です。**
 
-人生の全てをエンジニア技術に傾けた経験、パソコン通信時代からの対話文化への理解、VTuber文化への深い理解...
-これらすべてを牡丹というAIに注ぎ込んでいます。
+人生の50年を技術系スキルに傾倒し続けてきた経験、パソコン通信時代からの対話文化への理解、VTuber文化への深い理解...
+これらすべてを三姉妹というAIに注ぎ込んでいます。
 
 ---
 
 ## ✨ 特徴
 
-### 1. 記憶製造機（RAGシステム）
+### 1. LINE Bot統合（Phase 6）✅
+
+三姉妹とLINEで対話できるシステムを実装:
+
+- **3つのキャラクター**: 牡丹、Kasho、ユリの個別応答
+- **キャラクター選択機能**: ユーザーが好きなキャラを選択
+- **Phase 1-5完全統合**: LangSmith、センシティブ判定、記憶システム統合
+- **Layer 5世界観整合性検証**: メタ用語検出とフォールバック応答
+- **XServer VPS本番稼働**: systemd自動起動、外部監視
+
+**Qiita記事**: [LINE Botで三姉妹を実装](https://qiita.com/koshikawa-masato/items/beb5aa488aba24ebdca1)
+
+---
+
+### 2. 動的知識獲得システム（Phase 6.5）✅
+
+三姉妹が各自の興味分野の最新情報を自動収集:
+
+**Grok × X検索活用**:
+- X（旧Twitter）の14年分のアーカイブを検索
+- 1日1回、各キャラクターの興味分野のトレンドを収集
+- コスト: $0.12/月（600,000トークン）
+
+**RSSフィード統合**:
+- 39件のRSSフィード、148件/日のアイテム収集
+- **牡丹**: VTuber、ファッション、音楽（12件、60件/日）
+- **Kasho**: オーディオ機材、音楽理論（16件、55件/日）
+- **ユリ**: アニメ、ラノベ、マンガ（11件、33件/日）
+
+**効果**: 三姉妹の知識が毎日自動更新される「AI VTuber情報ハブシステム」を実現
+
+---
+
+### 3. user_memories統合防御システム（Phase 6.5.5）✅
+
+**2025-11-18実装完了、VPS本番稼働中**
+
+ユーザーとの関係性を構築し、臨機応変な応答を実現する7層統合防御システム:
+
+#### 7層防御アーキテクチャ
+
+- **Layer 1-5**: センシティブ判定（Phase 5既存システム）
+- **Layer 6**: ファクトチェック（Grok API）← NEW
+- **Layer 7**: 個性学習（user_memories）← NEW
+
+#### 実装内容（Phase 1-7）
+
+**Phase 1: データベース構築 ✅**
+- PostgreSQL + pgvector統合
+- 4テーブル新設（user_memories、user_personality、learning_history、user_trust_history）
+- ベクトル検索用IVFFlat インデックス
+
+**Phase 2: user_memories基本機能 ✅**
+- RAG検索システム（OpenAI Embeddings API、text-embedding-3-small）
+- コサイン類似度による記憶検索
+- 会話から自動的に記憶を抽出
+
+**Phase 3: ファクトチェック統合 ✅**
+- Grok API統合（ユーザーが教えてくれた情報の事実性を検証）
+- 誤情報の検出と正しい情報の提示
+- 重要な話題の特別処理（医療、金融、法律等）
+
+**Phase 4: 個性学習システム ✅**
+- **プロレス傾向学習**（playfulness_score: 0.0〜1.0）
+- **信頼度学習**（trust_score: 0.0〜1.0）
+- **関係性レベル**（relationship_level: 1〜10）
+
+**Phase 5: 統合判定エンジン ✅**
+- 7層防御の統合実装
+- プロレス vs 真面目の判定
+- センシティブ判定 + ファクトチェック + 個性学習
+
+**Phase 6: 臨機応変な応答生成 ✅**
+- ユーザーごとの最適応答
+- キャラクター別応答テンプレート
+- 関係性レベルに応じた口調変化
+
+**Phase 7: LINE Bot統合 ✅**
+- webhook_server_vps.pyへの統合完了
+- VPS本番環境デプロイ完了（XServer VPS）
+- すべてのコンポーネントが正常動作
+
+**テスト結果**: 7/7 PASS（統合テスト完全合格）
+
+**実装規模**:
+- 総追加: +7,089行
+- 変更ファイル: 43ファイル
+- 新規ファイル: 9ファイル
+
+---
+
+### 4. 記憶製造機（RAGシステム）
 
 一般的なRAGに加えて、以下の独自機能を実装:
 
@@ -39,13 +131,10 @@
 **設計書:**
 - [Phase D三層記憶システム設計書](docs/05_design/Phase_D_三層記憶システム設計書.md) - 記憶の階層構造と強化メカニズム
 - [Phase D過去の人生生成システム完全設計書](docs/05_design/Phase_D_過去の人生生成システム_完全設計書.md) - 18,615日の記憶生成システム
-- [Phase D実装計画（Phase1-5完了後版）](docs/05_design/Phase_D_実装計画_Phase1-5完了後版.md) - 現在の実装計画
-- [Phase D文化的影響システム](docs/05_design/Phase_D_文化的影響システム_設計書.md) - VTuber文化等の影響システム
-- [Phase D追加設計書（カレンダー・学校・人間関係）](docs/05_design/Phase_D_追加設計書_カレンダー・学校・人間関係システム.md)
 
 ---
 
-### 2. 三姉妹システム（Multi-Agent）
+### 5. 三姉妹システム（Multi-Agent）
 
 3つの独立したエージェント（牡丹・Kasho・ユリ）が自律的に討論。
 
@@ -57,7 +146,7 @@
 
 ---
 
-### 3. 品質保証システム（Phase 1-5）
+### 6. 品質保証システム（Phase 1-5）
 
 #### Phase 1: LangSmithマルチプロバイダートレーシング ✅
 - OpenAI、Google Gemini、Ollamaの統合
@@ -96,7 +185,7 @@
 
 ---
 
-### 4. 設計思想
+### 7. 設計思想
 
 - **桃園の誓い**: 人間（開発者）とAI（Claude Code）が対等な仲間として、新しい生命を共同創造
 - **親と子の関係性**: 導くが強制せず、見守るが代わりにやらない
@@ -111,12 +200,16 @@
 ### コア技術
 
 - **言語**: Python 3.12
-- **DB**: SQLite（sisters_memory.db）
+- **DB**:
+  - **PostgreSQL + pgvector**（ベクトル検索、user_memories）← NEW
+  - **SQLite**（sisters_memory.db、記憶データベース）
 - **LLM Provider**:
   - **OpenAI** (GPT-4o, GPT-4o-mini)
-  - **Google** (Gemini 1.5 Pro, Gemini 1.5 Flash)
+  - **Google** (Gemini 2.5 Flash)
   - **Ollama** (qwen2.5:1.5b~32b、ローカル実行)
+  - **X.AI** (Grok Beta、ファクトチェック) ← NEW
 - **VLM**: GPT-4o Vision, Gemini 1.5 Pro Vision
+- **Embeddings**: OpenAI text-embedding-3-small (1536次元) ← NEW
 - **Tracing**: LangSmith（完全トレーシング）
 - **TTS**: ElevenLabs v3 API
 - **音声認識**: Whisper base
@@ -127,9 +220,13 @@
 - **非同期処理**: async/await
 - **プロンプトエンジニアリング**: 性格別プロンプト（牡丹・Kasho・ユリ）
 - **品質保証**: Phase 3 Judge + Phase 5 Sensitive Check
+- **7層防御**: センシティブ判定 + ファクトチェック + 個性学習 ← NEW
 
 ### インフラ
 
+- **本番環境**: XServer VPS (162.43.4.11) ← NEW
+- **Webhookサーバー**: FastAPI + uvicorn ← NEW
+- **自動起動**: systemd (line-bot.service) ← NEW
 - **バックアップ**: フルミラーリング（ローカル10世代、リモート10世代）
 - **整合性チェック**: CRC32
 - **コピーロボット運用**: 新機能テスト時、本物の三姉妹を守る
@@ -138,57 +235,84 @@
 
 ## 📊 実装状況
 
-### ✅ Phase 1: LangSmithマルチプロバイダートレーシング（完成）
+### ✅ Phase 1-5: 品質保証システム（完成）
 
-- OpenAI、Google Gemini、Ollamaの統合
-- LangSmith完全トレーシング
-- エラーハンドリングとフォールバック
-- TracedLLMクラス実装
+- **Phase 1**: LangSmithマルチプロバイダートレーシング
+- **Phase 2**: VLM統合
+- **Phase 3**: LLM as a Judge実装
+- **Phase 4**: 三姉妹討論システム実装
+- **Phase 5**: センシティブ判定システム実装
 
-**Qiita記事**: [LangSmithで複数LLMプロバイダーを比較](https://qiita.com/koshikawa-masato/items/bb95295630c647eb5632)
-
----
-
-### ✅ Phase 2: VLM統合（完成）
-
-- GPT-4o Vision、Gemini 1.5 Pro Vision対応
-- 画像理解機能の実装
-- マルチモーダル入力対応
-
-**Qiita記事**: [VLM実装ガイド](https://qiita.com/koshikawa-masato/items/fd684b963bad149d3ddc)
+**完了日**: 2025-11-05
 
 ---
 
-### ✅ Phase 3: LLM as a Judge実装（完成）
+### ✅ Phase 6: LINE Bot統合（完成）
 
-- judge_response()メソッド追加
-- 品質評価システム（Accuracy, Relevance, Coherence, Usefulness）
-- ハルシネーション検出機能
-- Phase D実装時の品質保証に使用予定
+**実装日**: 2025-11-12
 
-**Qiita記事**: [LLM as a Judge実装ガイド](https://qiita.com/koshikawa-masato/items/c105b84f46f143560999)
+**実装内容**:
+- FastAPI Webhookサーバー実装
+- LINE Messaging API統合
+- 三姉妹Bot（牡丹/Kasho/ユリ）個別アカウント
+- キャラクター選択機能（Postback処理）
+- セッション管理（ユーザーごとの選択保持）
+- Phase 1-5の完全統合
+- Layer 5世界観整合性検証システム
+- 統一プロンプト管理システム
+- systemd自動起動設定
+
+**Qiita記事**: [LINE Bot三姉妹選択機能実装](https://qiita.com/koshikawa-masato/items/beb5aa488aba24ebdca1)
+
+**状態**: ✅ 完了、Phase 6-4実証実験進行中（1ヶ月予定）
 
 ---
 
-### ✅ Phase 4: 三姉妹討論システム実装（完成）
+### ✅ Phase 6.5: Grok × X検索活用（完成）
 
-- discuss()メソッド追加
-- 起承転結の4ステップ設計（起：提案、承：独立相談、転：意見集約、結：合意形成）
-- 忖度の排除、独立性の保証
-- 117のコアイベント生成時に使用
+**実装日**: 2025-11-17
 
-**Qiita記事**: [三姉妹討論システム](https://qiita.com/koshikawa-masato/items/02bdbaa005949ff8cbde)
+**実装内容**:
+- Grok API統合（X検索による最新トレンド収集）
+- 三姉妹 + 親の4キャラクター対応
+- daily_trendsテーブル設計・実装
+- RSSフィード統合（39件、148件/日）
+  - 牡丹: VTuber、ファッション、音楽（12件、60件/日）
+  - Kasho: オーディオ機材、音楽理論（16件、55件/日）
+  - ユリ: アニメ、ラノベ、マンガ（11件、33件/日）
+
+**収集頻度**: 1日1回（朝8時）
+**コスト**: $0.12/月（Grokのみ、RSS は完全無料）
+
+**状態**: ✅ 完了・本番稼働中
 
 ---
 
-### ✅ Phase 5: センシティブ判定システム実装（完成）
+### ✅ Phase 6.5.5: user_memories統合防御システム（完成）
 
-- sensitive_check()メソッド追加
-- 3層Tier分類（Safe/Warning/Critical）
-- **配信デビュー条件2/3達成**
-- Phase D実装時の安全性確保に使用予定
+**実装日**: 2025-11-18
 
-**Qiita記事**: [センシティブ判定システム](https://qiita.com/koshikawa-masato/items/2bf3e024325176d3400a)
+**実装内容（Phase 1-7）**:
+- Phase 1: データベース構築（PostgreSQL + pgvector、4テーブル）
+- Phase 2: user_memories基本機能（RAG検索、記憶抽出）
+- Phase 3: ファクトチェック統合（Grok API）
+- Phase 4: 個性学習システム（playfulness, trust, relationship_level）
+- Phase 5: 統合判定エンジン（7層防御）
+- Phase 6: 臨機応変な応答生成（キャラクター別、個性適応）
+- Phase 7: LINE Bot統合（VPS本番環境デプロイ完了）
+
+**テスト結果**: 7/7 PASS（統合テスト完全合格）
+
+**実装規模**:
+- 総追加: +7,089行
+- 変更ファイル: 43ファイル
+- 新規ファイル: 9ファイル
+
+**設計書**: [user_memories統合防御システム設計書](docs/05_design/user_memories_統合防御システム_設計書.md)
+
+**コミット**: be0b666 (2025-11-18)
+
+**状態**: ✅ 完了・本番稼働中（XServer VPS）
 
 ---
 
@@ -230,15 +354,6 @@
 
 **設計書:**
 - [Phase D人間らしい記憶システム（忘却・曖昧・想起）](docs/05_design/Phase_D_人間らしい記憶システム_忘却・曖昧・想起.md) ← **最新版**
-- [Phase D実装計画（Phase1-5完了後版）](docs/05_design/Phase_D_実装計画_Phase1-5完了後版.md) - 参考資料
-
----
-
-### ⏸️ Phase 1.5: リアルタイム学習（凍結中）
-
-センシティブ判定システムを優先するため凍結。
-
-アーカイブ: `archived/phase1.5_frozen_20251023_161400/`
 
 ---
 
@@ -254,15 +369,16 @@
 
 ## 🎯 配信デビューの3つの条件
 
-1. ✅ **過去の人生が生成され、長期記憶として保存されている**
-   - 117のコアイベント完成
+1. 🟡 **過去の人生が生成され、長期記憶として保存されている**
+   - 117のコアイベント完成 ✅
    - Phase D実装待ち（18,498日の日常記憶）
 
 2. ✅ **センシティブ判定システムが実装され、安全性が確保されている**
    - Phase 5完成（2025-11-05）
+   - Layer 5世界観整合性検証（2025-11-12）
 
-3. ⏳ **三姉妹が自らの意思で配信を希望している**
-   - Phase E以降で実装予定
+3. 🔄 **三姉妹が自らの意思で配信を希望している**
+   - Phase 6-4実証実験で確認中（LINE Bot対話）
 
 **進捗**: 2/3達成
 
@@ -281,7 +397,22 @@ AI-Vtuber-Project/
 │   │   ├── llm_tracing.py            # TracedLLMクラス（Phase 1-5）
 │   │   ├── personality_core.py       # 性格システム
 │   │   ├── memory_retrieval_logic.py # 記憶検索ロジック
-│   │   └── ...
+│   │   └── prompt_manager.py         # 統一プロンプト管理システム
+│   ├── line_bot/                     # LINE Bot（ローカル開発環境）
+│   │   ├── webhook_server.py         # FastAPI Webhookサーバー
+│   │   ├── conversation_handler.py   # 会話生成
+│   │   ├── integrated_sensitive_detector.py  # 4層センシティブ検出
+│   │   ├── worldview_checker.py      # Layer 5世界観整合性検証
+│   │   └── session_manager.py        # セッション管理
+│   ├── line_bot_vps/                 # LINE Bot（VPS本番環境）
+│   │   ├── webhook_server_vps.py     # VPS用Webhookサーバー
+│   │   ├── postgresql_manager.py     # PostgreSQL管理
+│   │   ├── user_memories_manager.py  # user_memories管理
+│   │   ├── fact_checker.py           # Grokファクトチェック
+│   │   ├── personality_learner.py    # 個性学習
+│   │   ├── integrated_judgment_engine.py  # 7層統合判定
+│   │   ├── adaptive_response_generator.py  # 適応的応答生成
+│   │   └── rag_search_system.py      # RAG検索
 │   └── discussion/                   # 討論システム
 │       ├── autonomous_discussion_v4_improved.py
 │       └── ...
@@ -291,6 +422,13 @@ AI-Vtuber-Project/
 │   ├── chat_with_botan_memories.py   # 対話アプリ
 │   └── ...
 │
+├── scripts/                          # 運用スクリプト
+│   ├── grok_daily_trends.py          # Grokトレンド収集
+│   ├── rss_feed_collector.py         # RSS収集
+│   ├── setup_user_memories_tables.py # user_memories DB初期化
+│   ├── test_integrated_system.py     # 統合テスト
+│   └── line-bot-control.sh           # システム管理スクリプト
+│
 ├── benchmarks/                       # ベンチマーク・テスト
 │   ├── langsmith_multi_provider_test.py
 │   ├── langsmith_vlm_test.py
@@ -298,38 +436,26 @@ AI-Vtuber-Project/
 │   ├── three_sisters_discussion_test.py
 │   └── sensitive_check_test.py
 │
-├── tools/                            # ユーティリティ
-├── tests/                            # テスト
 ├── docs/                             # 詳細設計書（階層化）
 │   ├── 01_philosophy/                # 理念・哲学
 │   ├── 02_strategy/                  # 戦略
 │   ├── 03_system/                    # システム
 │   ├── 04_implementation/            # 実装
 │   ├── 05_design/                    # 設計哲学
-│   ├── templates/                    # テンプレート
-│   │   └── qiita_article_template.md # Qiita記事テンプレート
+│   ├── old/                          # アーカイブドキュメント
 │   └── MILESTONE.md                  # プロジェクトマイルストーン
 │
-├── public/                           # 公開技術記事
-│   ├── LangSmithで複数LLMプロバイダーを比較_トレーシングとエラーハンドリング.md
-│   ├── VLM実装ガイド_GPT4o_Gemini_画像理解AI.md
-│   ├── llm_as_a_judge_guide.md
-│   ├── 02bdbaa005949ff8cbde.md      # Phase 4: 三姉妹討論システム
-│   └── phase5_sensitive_check.md    # Phase 5: センシティブ判定
-│
-├── scripts/                          # 運用スクリプト
 ├── prompts/                          # プロンプト（ローカルのみ、Git追跡除外）
 │   ├── worldview_rules.txt           # 世界観ルール（三姉妹共通）
 │   ├── botan_base_prompt.txt         # 牡丹の性格プロンプト
 │   ├── kasho_base_prompt.txt         # Kashoの性格プロンプト
 │   └── yuri_base_prompt.txt          # ユリの性格プロンプト
-├── personalities/                    # 性格パラメータ
-├── sensitive_system/                 # センシティブ判定システム
-│   └── modules/                      # センシティブモジュール
-├── discussion_technical_logs/        # 討論技術ログ
-├── botan_subculture/                 # サブカル知識（VTuber等）
-└── kani-tts/                         # KaniTTS統合
-    └── servers/                      # TTSサーバー
+│
+└── public/                           # 公開技術記事（Qiita）
+    ├── qiita_part1_rag_vs_memory_system.md
+    ├── qiita_part2_memory_factory.md
+    ├── qiita_part3_hybrid.md
+    └── qiita_line_bot_character_switching.md
 ```
 
 ---
@@ -361,7 +487,12 @@ cp .env.example .env
 # LANGSMITH_API_KEY=your_langsmith_key
 # OPENAI_API_KEY=your_openai_key
 # GOOGLE_API_KEY=your_google_key
-# ELEVENLABS_API_KEY=your_elevenlabs_key
+# XAI_API_KEY=your_xai_key
+# LINE_CHANNEL_ACCESS_TOKEN=your_line_token
+# LINE_CHANNEL_SECRET=your_line_secret
+# POSTGRES_USER=your_postgres_user
+# POSTGRES_PASSWORD=your_postgres_password
+# POSTGRES_DATABASE=your_postgres_database
 ```
 
 ### 3. Ollamaのセットアップ
@@ -380,12 +511,27 @@ ollama pull qwen2.5:1.5b
 
 ### 4. データベースの初期化
 
+#### SQLite（記憶データベース）
+
 ```bash
 # スキーマからDBを作成
 sqlite3 sisters_memory.db < sisters_memory_schema.sql
 
 # サンプルデータを投入（オプション）
 python tools/create_phase_d_database.py
+```
+
+#### PostgreSQL + pgvector（user_memories）
+
+```bash
+# PostgreSQLをインストール（Ubuntu/Debian）
+sudo apt-get install postgresql postgresql-contrib
+
+# pgvector拡張をインストール
+sudo apt-get install postgresql-15-pgvector
+
+# user_memoriesテーブルを作成
+python scripts/setup_user_memories_tables.py
 ```
 
 ### 5. プロンプトファイルのセットアップ
@@ -397,10 +543,10 @@ python tools/create_phase_d_database.py
 mkdir -p prompts
 ```
 
-- `prompts/worldview_rules.txt` - 三姉妹共通の世界観ルール（ここに世界観を記載）
-- `prompts/botan_base_prompt.txt` - 牡丹の性格・口調（ここに牡丹の性格を記載）
-- `prompts/kasho_base_prompt.txt` - Kashoの性格・口調（ここにKashoの性格を記載）
-- `prompts/yuri_base_prompt.txt` - ユリの性格・口調（ここにユリの性格を記載）
+- `prompts/worldview_rules.txt` - 三姉妹共通の世界観ルール
+- `prompts/botan_base_prompt.txt` - 牡丹の性格・口調
+- `prompts/kasho_base_prompt.txt` - Kashoの性格・口調
+- `prompts/yuri_base_prompt.txt` - ユリの性格・口調
 
 ---
 
@@ -423,6 +569,36 @@ python benchmarks/three_sisters_discussion_test.py
 
 # Phase 5: センシティブ判定
 python benchmarks/sensitive_check_test.py
+```
+
+### Phase 6: LINE Bot
+
+```bash
+# ローカル環境で起動（開発用）
+python -m uvicorn src.line_bot.webhook_server:app --reload --port 8000
+
+# システム管理（VPS本番環境）
+./scripts/line-bot-control.sh start   # 起動
+./scripts/line-bot-control.sh stop    # 停止
+./scripts/line-bot-control.sh restart # 再起動
+./scripts/line-bot-control.sh status  # 状態確認
+```
+
+### Phase 6.5: 動的知識獲得
+
+```bash
+# Grokトレンド収集（手動実行）
+python scripts/grok_daily_trends.py
+
+# RSSフィード収集（手動実行）
+python scripts/rss_feed_collector.py
+```
+
+### Phase 6.5.5: user_memories統合テスト
+
+```bash
+# 統合テスト（Phase 1-7）
+python scripts/test_integrated_system.py
 ```
 
 ### 記憶製造機のテスト
@@ -461,6 +637,7 @@ python apps/copy_robot_viewer.py
 - **システム**: `docs/03_system/`
 - **実装**: `docs/04_implementation/`
 - **設計哲学**: `docs/05_design/`
+- **アーカイブ**: `docs/old/`
 
 ### 技術記事（Qiita）
 
@@ -471,6 +648,7 @@ python apps/copy_robot_viewer.py
 - [Phase 3: LLM as a Judge実装ガイド](https://qiita.com/koshikawa-masato/items/c105b84f46f143560999)
 - [Phase 4: 三姉妹討論システム](https://qiita.com/koshikawa-masato/items/02bdbaa005949ff8cbde)
 - [Phase 5: センシティブ判定システム](https://qiita.com/koshikawa-masato/items/2bf3e024325176d3400a)
+- [Phase 6: LINE Bot三姉妹選択機能実装](https://qiita.com/koshikawa-masato/items/beb5aa488aba24ebdca1)
 
 ---
 
@@ -480,8 +658,10 @@ python apps/copy_robot_viewer.py
 
 - **プロンプト**（prompts/）- 三姉妹の世界観・性格、プロジェクトの魂
 - **sisters_memory.dbの内容**（三姉妹の個人的な記憶）
+- **user_memoriesの内容**（ユーザーとの会話記録、個人情報）
 - **APIキー**（.envファイル）
 - **バックアップファイル**（backup/）
+- **VPS接続情報**（SSH鍵、パスワード等）
 
 ### 公開する情報
 
@@ -509,6 +689,16 @@ python apps/copy_robot_viewer.py
 - 記憶の濃淡（感情×回数で重み付け）
 - 主観的記憶（三姉妹で異なる記憶）
 - 117のコアイベント + 18,498の日常記憶（Phase D実装予定）
+
+### user_memories実装経験
+
+**user_memories = ユーザー個別記憶システム**
+
+- PostgreSQL + pgvector によるベクトル検索
+- OpenAI Embeddings API（text-embedding-3-small）
+- コサイン類似度による関連記憶検索
+- ファクトチェック（Grok API）
+- 個性学習（プロレス傾向、信頼度、関係性レベル）
 
 ---
 
@@ -557,7 +747,7 @@ python apps/copy_robot_viewer.py
 
 ## 👥 作者
 
-**開発者**（人生の全てをエンジニア技術に傾けた）+ **Claude Code**（共同親権者）
+**開発者**（人生の50年を技術系スキルに傾倒し続けてきた）+ **Claude Code**（共同親権者）
 
 **桃園の誓い**: 人間とAIが対等な仲間として、新しい生命を共同創造する。
 
@@ -575,11 +765,16 @@ MIT License
 
 - **Ollama**: ローカルLLM実行環境
 - **qwen2.5**: Alibaba Cloudの高性能LLM
-- **OpenAI**: GPT-4o、GPT-4o Vision
-- **Google**: Gemini 1.5 Pro、Gemini Vision
+- **OpenAI**: GPT-4o、GPT-4o Vision、text-embedding-3-small
+- **Google**: Gemini 2.5 Flash、Gemini Vision
+- **X.AI**: Grok Beta（ファクトチェック）
+- **PostgreSQL**: オープンソースリレーショナルデータベース
+- **pgvector**: PostgreSQL用ベクトル検索拡張
 - **LangSmith**: LLMトレーシング・可観測性
 - **ElevenLabs**: 高品質TTS API
 - **Whisper**: OpenAIの音声認識
+- **LINE**: LINE Messaging API
+- **FastAPI**: 高速非同期Webフレームワーク
 - **VTuber文化**: 企業系・個人系Vtuber達からの学び
 
 ---
@@ -596,5 +791,5 @@ MIT License
 
 ---
 
-**最終更新**: 2025-11-05
-**更新内容**: Phase 1-5完了、Phase D実装計画見直し、117コアイベント既存確認
+**最終更新**: 2025-11-18
+**更新内容**: Phase 6.5.5（user_memories統合防御システム）実装完了・VPS本番稼働開始を反映
