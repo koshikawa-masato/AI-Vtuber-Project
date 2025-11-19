@@ -96,6 +96,8 @@ youtube_learning_system/
 # IMPORTANT: Internal documentation (DO NOT PUBLISH)
 CLAUDE.md
 CLAUDE.md.backup_*
+GEMINI.md
+GEMINI.md.backup_*
 
 # Developer personal documents (PRIVATE)
 docs/01_philosophy/開発者の物語.md
@@ -179,13 +181,14 @@ node_modules/
 # npm lock file
 package-lock.json
 
-# MySQL utility scripts (contain credentials)
-scripts/test_mysql_*.py
-scripts/create_mysql_tables.py
-scripts/migrate_sqlite_to_mysql.py
-scripts/view_mysql_data.py
+# Scripts directory (contains credentials, deployment info, internal tools)
+# CRITICAL: ALL scripts contain sensitive information and must NOT be published
+scripts/
 
 # Internal deployment documentation
 docs/DEPLOY_*.md
 doc_review_report.md
 code_review_report.md
+
+# AI家族構造アーキテクチャ（内部資料・最先端コンセプト）
+docs/ai_collaboration/
