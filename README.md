@@ -35,7 +35,7 @@
 - **キャラクター選択機能**: ユーザーが好きなキャラを選択
 - **Phase 1-5完全統合**: LangSmith、センシティブ判定、記憶システム統合
 - **Layer 5世界観整合性検証**: メタ用語検出とフォールバック応答
-- **XServer VPS本番稼働**: systemd自動起動、外部監視
+- **VPS本番稼働**: systemd自動起動、外部監視
 
 **Qiita記事**: [LINE Botで三姉妹を実装](https://qiita.com/koshikawa-masato/items/beb5aa488aba24ebdca1)
 
@@ -106,7 +106,7 @@
 
 **Phase 7: LINE Bot統合 ✅**
 - webhook_server_vps.pyへの統合完了
-- VPS本番環境デプロイ完了（XServer VPS）
+- VPS本番環境デプロイ完了
 - すべてのコンポーネントが正常動作
 
 **テスト結果**: 7/7 PASS（統合テスト完全合格）
@@ -224,9 +224,9 @@
 
 ### インフラ
 
-- **本番環境**: XServer VPS (162.43.4.11) ← NEW
+- **本番環境**: VPS本番環境 ← NEW
 - **Webhookサーバー**: FastAPI + uvicorn ← NEW
-- **自動起動**: systemd (line-bot.service) ← NEW
+- **自動起動**: systemd による自動起動 ← NEW
 - **バックアップ**: フルミラーリング（ローカル10世代、リモート10世代）
 - **整合性チェック**: CRC32
 - **コピーロボット運用**: 新機能テスト時、本物の三姉妹を守る
@@ -312,7 +312,7 @@
 
 **コミット**: be0b666 (2025-11-18)
 
-**状態**: ✅ 完了・本番稼働中（XServer VPS）
+**状態**: ✅ 完了・本番稼働中（VPS本番環境）
 
 ---
 
