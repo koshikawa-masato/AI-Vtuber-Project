@@ -55,7 +55,7 @@ I believe this project could be an excellent fit for:
 
 ### Why This Matters for Mistral
 
-Your Agents API emphasizes:
+The Mistral Agents API emphasizes:
 
 * multi-agent orchestration
 * Python execution
