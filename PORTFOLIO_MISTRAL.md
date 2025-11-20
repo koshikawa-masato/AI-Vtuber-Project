@@ -28,7 +28,7 @@ In just **47 business days** (September 8 – November 11, 2025), I designed and
 * 24/7 production deployment
 * daily knowledge ingestion pipelines (39 RSS feeds + Grok API)
 
-This system was designed with **Mistral Agents API**, **function calling**, **memory tools**, and **RAG-free orchestration** in mind.
+This system's architecture **naturally aligns with** Mistral Agents API concepts: function calling, memory tools, and RAG-free orchestration.
 
 I believe this project could be an excellent fit for:
 
