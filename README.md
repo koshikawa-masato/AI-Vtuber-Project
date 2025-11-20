@@ -197,39 +197,76 @@
 
 ## 🛠️ 技術スタック
 
+### 開発タイムライン
+
+- **プロジェクト開始**: 2025-09-08
+- **本番リリース**: 2025-11-11（**47営業日**）
+- **完全稼働**: 2025-11-18（**52営業日**）
+
 ### コア技術
 
 - **言語**: Python 3.12
+- **フレームワーク**: FastAPI + uvicorn
 - **DB**:
-  - **PostgreSQL + pgvector**（ベクトル検索、user_memories）← NEW
-  - **SQLite**（sisters_memory.db、記憶データベース）
-- **LLM Provider**:
-  - **OpenAI** (GPT-4o, GPT-4o-mini)
-  - **Google** (Gemini 2.5 Flash)
-  - **Ollama** (qwen2.5:1.5b~32b、ローカル実行)
-  - **X.AI** (Grok Beta、ファクトチェック) ← NEW
-- **VLM**: GPT-4o Vision, Gemini 1.5 Pro Vision
-- **Embeddings**: OpenAI text-embedding-3-small (1536次元) ← NEW
-- **Tracing**: LangSmith（完全トレーシング）
+  - **PostgreSQL + pgvector**（user_memories、学習ログ、セッション管理）
+  - **SQLite**（copy_robot_memory.db、記憶データベース）
+
+### LLMプロバイダー
+
+#### VPS本番環境（24/7稼働中）
+
+- **OpenAI**: gpt-4o-mini（メイン使用、デフォルト）
+- **Google Gemini**: gemini-2.0-flash-exp（切り替え可能）
+- **Anthropic Claude**: claude-3-5-sonnet-20241022（切り替え可能）
+- **X.AI Grok**: grok-beta（ファクトチェック専用）
+- **Embeddings**: OpenAI text-embedding-3-small（1536次元、RAG検索用）
+
+**環境変数で切り替え**:
+```bash
+VPS_LLM_PROVIDER=openai  # or gemini, claude
+VPS_LLM_MODEL=gpt-4o-mini
+```
+
+#### ローカル開発環境
+
+- **Ollama**: qwen2.5 (1.5b / 3b / 7b / 14b / 32b)
+  - GPU/CPU分離アーキテクチャ
+  - GPU: 即応処理、CPU: 深層分析
+- **VLM**: GPT-4o Vision, Gemini Vision（画像理解、Phase 2）
+
+### 品質保証・トレーシング
+
+- **LangSmith**: 完全トレーシング（Phase 1）
+- **LLM as a Judge**: 品質評価システム（Phase 3）
+- **7層防御**: センシティブ判定 + ファクトチェック + 個性学習（Phase 5-6.5.5）
+
+### その他の技術
+
 - **TTS**: ElevenLabs v3 API
 - **音声認識**: Whisper base
+- **LINE Bot SDK**: line-bot-sdk 3.6.0
 
-### アーキテクチャ
+### インフラ・アーキテクチャ
 
-- **GPU/CPU分離**: GPU（即応処理）、CPU（深層分析）
-- **非同期処理**: async/await
-- **プロンプトエンジニアリング**: 性格別プロンプト（牡丹・Kasho・ユリ）
-- **品質保証**: Phase 3 Judge + Phase 5 Sensitive Check
-- **7層防御**: センシティブ判定 + ファクトチェック + 個性学習 ← NEW
+#### VPS本番環境
 
-### インフラ
+- **Webhookサーバー**: FastAPI + uvicorn
+- **プロセス管理**: systemd（自動起動、自動再起動）
+- **ログ管理**: 日次ローテーション（7日保持）
+- **データベース**: PostgreSQL 15 + pgvector拡張
 
-- **本番環境**: VPS本番環境 ← NEW
-- **Webhookサーバー**: FastAPI + uvicorn ← NEW
-- **自動起動**: systemd による自動起動 ← NEW
+#### 開発環境
+
 - **バックアップ**: フルミラーリング（ローカル10世代、リモート10世代）
 - **整合性チェック**: CRC32
 - **コピーロボット運用**: 新機能テスト時、本物の三姉妹を守る
+- **プロンプト管理**: 統一プロンプトシステム（prompts/）
+
+### システム設計思想
+
+- **非同期処理**: async/await（30秒タイムアウト対応）
+- **プロンプトエンジニアリング**: 性格別プロンプト（牡丹・Kasho・ユリ）
+- **環境分離**: 開発環境（Ollama）と本番環境（クラウドLLM）の完全分離
 
 ---
 
