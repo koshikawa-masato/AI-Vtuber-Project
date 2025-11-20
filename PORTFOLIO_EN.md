@@ -12,7 +12,7 @@ A short preview of the system in action (3-persona autonomous dialogue):
 
 ## 🔥 Summary
 
-I am an AI Systems Architect based in Tokyo.
+I am an AI Systems Architect based in Osaka.
 In just **64 days** (September 8 – November 11, 2025), I designed and implemented a fully autonomous **3-persona, multi-agent LLM system** that integrates:
 
 * pgvector long‑term memory
