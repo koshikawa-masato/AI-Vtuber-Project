@@ -6,14 +6,14 @@ A short preview of the system in action (3-persona autonomous dialogue):
 
 ![AI-Vtuber Demo](screenshots/chat_20251111.gif)
 
-**Designed and built a full autonomous multi-agent LLM system in just 64 days (Sep 8 – Nov 11, 2025).**
+**Designed and built a full autonomous multi-agent LLM system in just 47 business days (Sep 8 – Nov 11, 2025).**
 
 ---
 
 ## 🔥 Summary
 
 I am an AI Systems Architect based in Osaka.
-In just **64 days** (September 8 – November 11, 2025), I designed and implemented a fully autonomous **3-persona, multi-agent LLM system** that integrates:
+In just **47 business days** (September 8 – November 11, 2025), I designed and implemented a fully autonomous **3-persona, multi-agent LLM system** that integrates:
 
 * pgvector long‑term memory
 * dynamic prompt reconstruction
@@ -29,7 +29,7 @@ My strength lies in **rapid system-level design**, **LLM orchestration**, and bu
 
 ## 🏆 Highlighted Achievements
 
-* **Built an autonomous multi-agent LLM system in 64 days** (from concept to production)
+* **Built an autonomous multi-agent LLM system in 47 business days** (from concept to production)
 * Designed **three independent AI personas** with unique behavior, memory, and reasoning styles
 * Built the **Sisters Council** — a structured debate engine enabling critique, refinement, and collective decision-making
 * Implemented **pgvector-based long‑term memory** (context scoring, episodic & semantic separation)
@@ -77,8 +77,8 @@ My strength lies in **rapid system-level design**, **LLM orchestration**, and bu
 ### **Timeline**
 
 * **Project Start:** September 8, 2025
-* **First Production Release:** November 11, 2025 **(64 days)**
-* **Full System Operational:** November 18, 2025 **(71 days)**
+* **First Production Release:** November 11, 2025 **(47 business days)**
+* **Full System Operational:** November 18, 2025 **(52 business days)**
 
 ### **What It Is**
 
