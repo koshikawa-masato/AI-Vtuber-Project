@@ -80,6 +80,19 @@ class CloudLLMProvider:
             self.client = None  # xAIはREST APIのみ
             logger.info(f"✅ xAI初期化完了: {model}")
 
+        elif provider == "kimi":
+            api_key = os.getenv("KIMI_API_KEY")
+            if not api_key:
+                raise ValueError("KIMI_API_KEY not found in environment variables")
+
+            # KimiはOpenAI互換APIなので、OpenAIクライアントを流用
+            # 試行: .cn と .ai の両方のドメインが存在するため、.ai を試す
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url="https://api.moonshot.ai/v1"
+            )
+            logger.info(f"✅ Kimi (Moonshot AI)初期化完了: {model}")
+
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
@@ -187,6 +200,28 @@ class CloudLLMProvider:
                 response.raise_for_status()
                 result_json = response.json()
                 result = result_json["choices"][0]["message"]["content"]
+
+            elif self.provider == "kimi":
+                # メッセージ構築（OpenAI互換）
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+
+                # 会話履歴を追加
+                if conversation_history:
+                    messages.extend(conversation_history)
+
+                messages.append({"role": "user", "content": prompt})
+
+                # Kimi API呼び出し（OpenAI互換）
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens
+                )
+
+                result = response.choices[0].message.content
 
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")

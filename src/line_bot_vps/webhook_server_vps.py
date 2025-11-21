@@ -830,11 +830,11 @@ async def webhook(request: Request):
 
                 logger.info(f"📩 メッセージ受信: {character} <- {user_message[:30]}...")
 
-                # 会話履歴を取得（過去100件 - Claude Haiku 3.5の長いコンテキストを活用）
+                # 会話履歴を取得（過去30件 - 最近の会話に集中）
                 conversation_history = session_manager.get_conversation_history(
                     user_id=user_id,
                     character=character,
-                    limit=100
+                    limit=30
                 )
                 if conversation_history:
                     logger.info(f"📚 会話履歴取得: {len(conversation_history)}件")
