@@ -135,9 +135,16 @@ class PostgreSQLManager:
         self,
         user_id: str,
         selected_character: Optional[str] = None,
-        last_message_at: Optional[datetime] = None
+        last_message_at: Optional[datetime] = None,
+        language: Optional[str] = None
     ) -> bool:
         """ユーザーセッションを保存（INSERT or UPDATE）
+
+        Args:
+            user_id: ユーザーID
+            selected_character: 選択されたキャラクター
+            last_message_at: 最終メッセージ時刻
+            language: 言語設定 ('ja' or 'en')
 
         Returns:
             成功したらTrue
@@ -148,16 +155,30 @@ class PostgreSQLManager:
 
         try:
             with self.connection.cursor() as cursor:
-                sql = """
-                    INSERT INTO sessions (user_id, selected_character, last_message_at)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (user_id) DO UPDATE SET
-                        selected_character = EXCLUDED.selected_character,
-                        last_message_at = EXCLUDED.last_message_at
-                """
-                cursor.execute(sql, (user_id, selected_character, last_message_at))
+                # 言語指定がある場合は言語も更新
+                if language is not None:
+                    sql = """
+                        INSERT INTO sessions (user_id, selected_character, last_message_at, language)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (user_id) DO UPDATE SET
+                            selected_character = EXCLUDED.selected_character,
+                            last_message_at = EXCLUDED.last_message_at,
+                            language = EXCLUDED.language
+                    """
+                    cursor.execute(sql, (user_id, selected_character, last_message_at, language))
+                else:
+                    # 言語指定がない場合は既存の動作を維持
+                    sql = """
+                        INSERT INTO sessions (user_id, selected_character, last_message_at)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (user_id) DO UPDATE SET
+                            selected_character = EXCLUDED.selected_character,
+                            last_message_at = EXCLUDED.last_message_at
+                    """
+                    cursor.execute(sql, (user_id, selected_character, last_message_at))
+
                 self.connection.commit()
-                logger.info(f"✅ セッション保存: user_id={user_id[:8]}..., character={selected_character}")
+                logger.info(f"✅ セッション保存: user_id={user_id[:8]}..., character={selected_character}, language={language}")
                 return True
 
         except Exception as e:

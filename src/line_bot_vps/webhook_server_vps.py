@@ -289,6 +289,10 @@ async def generate_response(
         except Exception as e:
             logger.warning(f"⚠️ 統合判定失敗（スキップ）: {e}")
 
+        # 言語設定を取得
+        language = session_manager.get_language(user_id)
+        logger.info(f"🌐 ユーザー言語設定: {language}")
+
         # プロンプト取得（世界観ルール + キャラクタープロンプト）
         character_prompt = prompt_manager.get_combined_prompt(character)
 
@@ -374,7 +378,7 @@ async def generate_response(
             logger.info(f"💬 適応的応答を使用")
             response = adaptive_response
         else:
-            # LLM生成（会話履歴 + トレンド情報を含む）
+            # LLM生成（会話履歴 + トレンド情報 + 言語設定を含む）
             response = llm_provider.generate_with_context(
                 user_message=user_message,
                 character_name=CHARACTERS[character]["name"],
@@ -386,7 +390,8 @@ async def generate_response(
                     "user_id": user_id,
                     "character": character,
                     "platform": "LINE_VPS"
-                }
+                },
+                language=language
             )
 
         # 応答後処理: 個性更新 + 記憶保存
@@ -551,10 +556,17 @@ async def webhook(request: Request):
             if postback_data.startswith("character="):
                 character = postback_data.split("=")[1]
                 if character in CHARACTERS:
+                    # キャラクターを設定
                     session_manager.set_character(user_id, character)
 
-                    # 確認メッセージを返信
-                    reply_message = f"✨ {CHARACTERS[character]['display_name']}を選択したよ！何でも聞いてね！"
+                    # 言語を切り替え（JP ↔ EN）
+                    new_language = session_manager.toggle_language(user_id)
+
+                    # バイリンガル確認メッセージ
+                    if new_language == 'en':
+                        reply_message = f"✨ You selected {CHARACTERS[character]['display_name']}! Ask me anything!\n✨ {CHARACTERS[character]['display_name']}を選択したよ！何でも聞いてね！"
+                    else:
+                        reply_message = f"✨ {CHARACTERS[character]['display_name']}を選択したよ！何でも聞いてね！\n✨ You selected {CHARACTERS[character]['display_name']}! Ask me anything!"
 
                     try:
                         import requests
@@ -577,7 +589,7 @@ async def webhook(request: Request):
                         response = requests.post(reply_url, headers=headers, json=payload)
 
                         if response.status_code == 200:
-                            logger.info(f"✅ キャラクター選択返信成功: {character}")
+                            logger.info(f"✅ キャラクター選択返信成功: {character}, language={new_language}")
                         else:
                             logger.error(f"❌ 返信エラー: {response.status_code}")
                     except Exception as e:
@@ -633,15 +645,34 @@ async def webhook(request: Request):
             elif postback_data == "action=feedback":
                 pg_manager.set_feedback_state(user_id, "waiting")
 
-                reply_message = (
-                    "📝 フィードバックをお待ちしています！\n\n"
-                    "以下のような内容をお送りください：\n"
-                    "- バグ報告\n"
-                    "- 機能要望\n"
-                    "- 改善提案\n"
-                    "- その他ご意見\n\n"
-                    "次のメッセージでフィードバックを入力してください。"
-                )
+                # 言語設定を取得
+                language = session_manager.get_language(user_id)
+
+                # バイリンガルメッセージ
+                if language == 'en':
+                    reply_message = (
+                        "📝 We're waiting for your feedback!\n\n"
+                        "Please send us:\n"
+                        "- Bug reports\n"
+                        "- Feature requests\n"
+                        "- Improvement suggestions\n"
+                        "- Other comments\n\n"
+                        "Enter your feedback in the next message."
+                    )
+                    cancel_label = "❌ Cancel"
+                    cancel_text = "Cancel"
+                else:
+                    reply_message = (
+                        "📝 フィードバックをお待ちしています！\n\n"
+                        "以下のような内容をお送りください：\n"
+                        "- バグ報告\n"
+                        "- 機能要望\n"
+                        "- 改善提案\n"
+                        "- その他ご意見\n\n"
+                        "次のメッセージでフィードバックを入力してください。"
+                    )
+                    cancel_label = "❌ キャンセル"
+                    cancel_text = "キャンセル"
 
                 try:
                     import requests
@@ -661,8 +692,8 @@ async def webhook(request: Request):
                                         "type": "action",
                                         "action": {
                                             "type": "message",
-                                            "label": "❌ キャンセル",
-                                            "text": "キャンセル"
+                                            "label": cancel_label,
+                                            "text": cancel_text
                                         }
                                     }
                                 ]
@@ -672,7 +703,7 @@ async def webhook(request: Request):
                     response = requests.post(reply_url, headers=headers, json=payload)
 
                     if response.status_code == 200:
-                        logger.info(f"✅ フィードバック受付返信成功")
+                        logger.info(f"✅ フィードバック受付返信成功 (language={language})")
                     else:
                         logger.error(f"❌ 返信エラー: {response.status_code}")
                 except Exception as e:
@@ -682,7 +713,12 @@ async def webhook(request: Request):
             elif postback_data == "action=terms":
                 try:
                     import requests
+                    # 言語設定を取得
+                    language = session_manager.get_language(user_id)
+
+                    # TODO: 将来的にバイリンガルFlex Messageを作成
                     flex_message = create_terms_flex_message()
+                    alt_text = "Terms of Service" if language == 'en' else "利用規約・免責事項"
 
                     reply_url = "https://api.line.me/v2/bot/message/reply"
                     headers = {
@@ -691,12 +727,12 @@ async def webhook(request: Request):
                     }
                     payload = {
                         "replyToken": reply_token,
-                        "messages": [{"type": "flex", "altText": "利用規約・免責事項", "contents": flex_message}]
+                        "messages": [{"type": "flex", "altText": alt_text, "contents": flex_message}]
                     }
                     response = requests.post(reply_url, headers=headers, json=payload)
 
                     if response.status_code == 200:
-                        logger.info(f"✅ 利用規約返信成功")
+                        logger.info(f"✅ 利用規約返信成功 (language={language})")
                     else:
                         logger.error(f"❌ 返信エラー: {response.status_code} - {response.text}")
                 except Exception as e:
@@ -706,7 +742,12 @@ async def webhook(request: Request):
             elif postback_data == "action=help":
                 try:
                     import requests
+                    # 言語設定を取得
+                    language = session_manager.get_language(user_id)
+
+                    # TODO: 将来的にバイリンガルFlex Messageを作成
                     flex_message = create_help_flex_message()
+                    alt_text = "Help" if language == 'en' else "ヘルプ・使い方"
 
                     reply_url = "https://api.line.me/v2/bot/message/reply"
                     headers = {
@@ -715,12 +756,12 @@ async def webhook(request: Request):
                     }
                     payload = {
                         "replyToken": reply_token,
-                        "messages": [{"type": "flex", "altText": "ヘルプ・使い方", "contents": flex_message}]
+                        "messages": [{"type": "flex", "altText": alt_text, "contents": flex_message}]
                     }
                     response = requests.post(reply_url, headers=headers, json=payload)
 
                     if response.status_code == 200:
-                        logger.info(f"✅ ヘルプ返信成功")
+                        logger.info(f"✅ ヘルプ返信成功 (language={language})")
                     else:
                         logger.error(f"❌ ヘルプ返信エラー: {response.status_code} - {response.text}")
                 except Exception as e:

@@ -245,7 +245,8 @@ class CloudLLMProvider:
         memories: Optional[str] = None,
         daily_trends: Optional[List[Dict[str, Any]]] = None,
         conversation_history: Optional[list] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        language: str = "ja"
     ) -> str:
         """
         コンテキスト付き生成
@@ -258,6 +259,7 @@ class CloudLLMProvider:
             daily_trends: 今日のトレンド情報（任意）
             conversation_history: 会話履歴 [{"role": "user", "content": "..."}, ...]
             metadata: メタデータ
+            language: 応答言語 ("ja" or "en")
 
         Returns:
             生成されたテキスト
@@ -321,22 +323,14 @@ class CloudLLMProvider:
             else:
                 logger.warning(f"Trends prompt file not found: {trends_prompt_file}")
 
-        system_prompt += """
-
-【最重要指示 - 絶対厳守】
-1. ⚠️ 必ず100%日本語のみで応答してください ⚠️
-2. ⚠️ 英語・中国語・ロシア語・その他の外国語は絶対に使わないでください ⚠️
-3. ⚠️ 中国語（簡体字・繁体字）は絶対禁止です ⚠️
-4. 固有名詞（Disney、Emilyなど）以外は全て日本語で表現してください
-5. あなたは日本人キャラクターです。日本語以外で話すことはありません
-6. 30秒以内に応答を完了してください
-7. 簡潔で自然な会話を心がけてください
-
-【応答言語チェック】
-応答を生成する前に必ず確認:
-- 中国語の文字が含まれていないか？
-- 英語（固有名詞以外）が含まれていないか？
-- 全て日本語で書かれているか？"""
+        # 言語別指示をファイルから読み込み
+        language_instruction_file = PROMPTS_DIR / f"language_instruction_{language}.txt"
+        if language_instruction_file.exists():
+            with open(language_instruction_file, 'r', encoding='utf-8') as f:
+                language_instruction = f.read()
+            system_prompt += f"\n\n{language_instruction}\n"
+        else:
+            logger.warning(f"Language instruction file not found: {language_instruction_file}")
 
         # デバッグ: システムプロンプト確認
         logger.info(f"🔍 システムプロンプト構築完了: キャラ={character_name}, 長さ={len(system_prompt)}文字")

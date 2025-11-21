@@ -253,6 +253,61 @@ class SessionManagerPostgreSQL:
             logger.error(f"❌ 統計取得エラー: {e}")
             return {"total": 0, "botan": 0, "kasho": 0, "yuri": 0}
 
+    def get_language(self, user_id: str) -> str:
+        """ユーザーの言語設定を取得
+
+        Args:
+            user_id: LINEユーザーID
+
+        Returns:
+            言語設定 ('ja' or 'en')、デフォルトは 'ja'
+        """
+        if not self.connected:
+            if not self.connect():
+                return 'ja'  # デフォルト: 日本語
+
+        session = self.pg_manager.get_session(user_id)
+        if session and 'language' in session:
+            return session.get('language', 'ja')
+        return 'ja'  # デフォルト: 日本語
+
+    def toggle_language(self, user_id: str) -> str:
+        """言語設定を切り替え（ja ↔ en）
+
+        Args:
+            user_id: LINEユーザーID
+
+        Returns:
+            切り替え後の言語 ('ja' or 'en')
+        """
+        if not self.connected:
+            if not self.connect():
+                return 'ja'
+
+        # 現在の言語を取得
+        current_language = self.get_language(user_id)
+
+        # 言語を切り替え
+        new_language = 'en' if current_language == 'ja' else 'ja'
+
+        # セッションを更新
+        session = self.pg_manager.get_session(user_id)
+        current_character = session.get('selected_character') if session else None
+
+        success = self.pg_manager.save_session(
+            user_id=user_id,
+            selected_character=current_character,
+            last_message_at=datetime.now(),
+            language=new_language
+        )
+
+        if success:
+            logger.info(f"User {user_id[:8]}... toggled language: {current_language} -> {new_language}")
+            return new_language
+        else:
+            logger.error(f"Failed to toggle language for user {user_id[:8]}...")
+            return current_language
+
     def __enter__(self):
         """コンテキストマネージャーのサポート"""
         self.connect()
