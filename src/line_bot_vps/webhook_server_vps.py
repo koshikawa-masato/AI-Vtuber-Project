@@ -169,6 +169,13 @@ logger.info("✅ UserMemoriesManager初期化完了")
 @app.on_event("startup")
 async def startup_event():
     """アプリケーション起動時の処理"""
+    logger.info("=" * 60)
+    logger.info("🚀 VPS LINE Bot起動")
+    logger.info(f"   LLM: {VPS_LLM_PROVIDER}/{VPS_LLM_MODEL}")
+    logger.info(f"   学習ログDB: PostgreSQL (localhost)")
+    logger.info(f"   キャラクター: {', '.join(CHARACTERS.keys())}")
+    logger.info("=" * 60)
+
     # PostgreSQL接続（VPS内localhost接続）
     if pg_manager.connect():
         logger.info("🎉 PostgreSQL接続成功（localhost）")
@@ -187,6 +194,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """アプリケーション終了時の処理"""
+    logger.info("👋 VPS LINE Bot終了")
     # PostgreSQL切断
     user_memories_manager.disconnect()
     integrated_judgment_engine.disconnect()
@@ -931,27 +939,6 @@ async def webhook(request: Request):
                     logger.error(f"❌ LINE API呼び出しエラー: {e}")
 
     return JSONResponse(content={"status": "ok"})
-
-
-# ========================================
-# 起動時ログ
-# ========================================
-
-@app.on_event("startup")
-async def startup_event():
-    """起動時処理"""
-    logger.info("=" * 60)
-    logger.info("🚀 VPS LINE Bot起動")
-    logger.info(f"   LLM: {VPS_LLM_PROVIDER}/{VPS_LLM_MODEL}")
-    logger.info(f"   学習ログDB: MySQL (SSH Tunnel)")
-    logger.info(f"   キャラクター: {', '.join(CHARACTERS.keys())}")
-    logger.info("=" * 60)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """終了時処理"""
-    logger.info("👋 VPS LINE Bot終了")
 
 
 # ========================================
