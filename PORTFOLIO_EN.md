@@ -2,9 +2,19 @@
 
 ## 🎬 Live Demo
 
+### AI Vtuber Project (LINE Bot)
 A short preview of the system in action (3-persona autonomous dialogue):
 
 ![AI-Vtuber Demo](screenshots/chat_20251111.gif)
+
+### Sisters-On-WhatsApp
+Watch the three sisters in action on WhatsApp:
+
+[![Watch Demo](https://img.youtube.com/vi/OSuatRt_Gyo/maxresdefault.jpg)](https://youtube.com/shorts/OSuatRt_Gyo)
+
+*Click to watch the Three Sisters responding on WhatsApp!*
+
+---
 
 **Designed and built two production autonomous multi-agent LLM systems:**
 - **AI Vtuber (LINE)**: 47 business days (Sep 8 – Nov 11, 2025)
