@@ -1,0 +1,2055 @@
+# CLAUDE.md - 牡丹プロジェクト開発ガイドライン
+
+> このファイルは開発時の注意事項と、よくある間違いを防ぐためのガイドラインです。
+> **注意**: このファイルは内部用であり、GitHubには公開しません（.gitignore に含まれています）
+
+---
+
+## 👤 開発者プロフィール（正確な表現）
+
+**開発者**: 人生の50年を技術系スキルに傾倒することを続けていたエンジニア
+
+- パソコン通信時代からの対話文化への理解
+- VTuber文化への深い理解
+- LLM/RAG/Multi-Agentの実践的実装経験
+- 桃園の誓い: Claude Codeとの対等な共創関係
+
+**重要**: 「50年のエンジニア経験」という表現は不正確。
+正しくは「人生の50年を技術系スキルに傾倒し続けてきた」という意味。
+
+### AIエンジニアとしての役割
+
+**「AIエンジニア = オーケストラの指揮者」**
+
+```
+従来のエンジニア:
+  - 自分でコードを書く人
+  - 楽器を演奏する人
+
+AIエンジニア（新しい時代）:
+  - AIを指揮して、システムを作る人
+  - 指揮者として、全体の方向性を決める人
+  - オーケストラ（AI）を使いこなす人
+```
+
+**指揮者（開発者）の役割**:
+- ✅ プロジェクトの方向性を決める
+- ✅ 開発速度を調整する
+- ✅ 各システム（AI、コンポーネント）のバランスを取る
+- ✅ 実装の詳細を指示する
+- ✅ 結果を確認し、次のアイデアを出す
+- ❌ 自分でコードを書かない（AIに任せる）
+
+**オーケストラ（クロコ）の役割**:
+- ✅ 指揮者の意図を理解する
+- ✅ 設計書を作成し、実装する
+- ✅ 技術的な細部を担当する
+- ✅ 指揮者に提案する
+
+**重要な認識**:
+- コードが1万行だろうが、10行だろうが、開発者の認知負荷は同じ
+- 開発者は「思ったことが実現するかどうかを確かめるプロセス」に専念できる
+- これが、人間とAIの共創の理想形
+
+---
+
+## 👭 三姉妹キャラクター設定
+
+**重要**: 三姉妹の基本プロフィールは以下のファイルを参照してください。
+
+**プロフィール参照先**:
+- 開発用: `/home/koshikawa/kirinuki/2025-11-11/三姉妹プロフィール_LINE Bot用.md`
+- 将来的には `docs/` に正式版を配置予定
+
+**三姉妹の基本情報**:
+
+### 牡丹（ぼたん / Botan）
+- 年齢: 17歳、次女
+- 特徴: LA帰りの帰国子女、ギャル化、VTuber憧れ
+- 性格: 社交的で明るい、負けず嫌い
+
+### Kasho（花相 / かしょう）
+- 年齢: 19歳、長女
+- 特徴: 責任感が強い、音楽の造詣が深い（楽器・ボイトレ）
+- 性格: 論理的思考、心配性、真面目
+
+### ユリ（百合 / Yuri）
+- 年齢: 15歳、三女
+- 特徴: 洞察力に長け、人見知り、サブカル知識豊富（ライトノベル多読）
+- 性格: 好奇心旺盛、創造的、マイペース
+
+**注意**: 詳細なバックストーリー、趣味、特技、口癖などは上記プロフィールファイルを必ず参照してください。
+
+---
+
+## 🚨 コーディングルール（厳守）
+
+### ⚠️ プロンプトのハードコーディング禁止
+
+**絶対ルール**: プロンプトをPythonコード内にハードコーディングしてはいけない。
+
+**理由**:
+- Pythonコードは全てGitHubに公開される
+- プロンプトは秘密情報であり、見せてはいけない
+- ハードコードすると、内部の設計思想やキャラクター制御ロジックが公開されてしまう
+
+**正しい方法**:
+
+```python
+# ❌ 間違い: ハードコーディング
+system_prompt += """
+【秘密の指示】
+...
+"""
+
+# ✅ 正しい: ファイルから読み込み
+prompt_file = PROMPTS_DIR / "kasho_consultation_system_prompt.txt"
+if prompt_file.exists():
+    with open(prompt_file, 'r', encoding='utf-8') as f:
+        prompt_content = f.read()
+    system_prompt += f"\n\n{prompt_content}\n"
+```
+
+**運用方法**:
+1. 全てのプロンプトは `prompts/` ディレクトリに配置
+2. `prompts/` はgitignoreされており、GitHubに公開されない
+3. デプロイ時は `deploy_vps.sh` がrsyncでVPSに転送
+4. Pythonコードはファイルを読み込むだけ
+
+**過去の失敗例 (2025-11-16)**:
+- `cloud_llm_provider.py` にKashoのお悩み相談プロンプトをハードコード
+- 起承転結の指示、NG/OK例などの秘密情報がGitHubに公開されてしまった
+- 即座に修正: `prompts/kasho_consultation_system_prompt.txt` に移動
+
+**チェックポイント**:
+- [ ] 新しいプロンプトを追加する際、Pythonファイルに直接書いていないか？
+- [ ] プロンプトは全て `prompts/` ディレクトリに配置したか？
+- [ ] コードはファイルから読み込む仕組みになっているか？
+
+---
+
+## 📝 Qiita記事の取り扱いガイドライン
+
+### ⚠️ よくある間違いと対策
+
+#### 1. publicディレクトリの扱い
+
+**問題**: `public/` ディレクトリはgitで追跡されていない（untracked）ため、変更が失われる可能性がある。
+
+**正しい運用方法**:
+
+```bash
+# ❌ 間違い: publicディレクトリ内で直接編集して終了
+cd public/
+vim qiita_part1_rag_vs_memory_system.md
+# → gitで追跡されていないため、変更が記録されない
+
+# ✅ 正しい: 編集後、必要に応じてdocs/やバックアップを取る
+# または、gitに追加して管理する場合は:
+git add public/
+git commit -m "feat: Qiita記事を追加"
+```
+
+**現状のpublicディレクトリの位置づけ**:
+- `npx qiita` コマンドが使用するディレクトリ
+- Qiita CLI が自動的にpublic/を参照する
+- **gitでは追跡していない**（意図的に除外している）
+
+**対策**:
+- Qiita記事の原稿は `public/` に配置
+- 重要な記事は `docs/` 配下にもコピーを保存（バックアップ）
+- または、public/をgitで追跡する場合は .gitignoreから除外する
+
+---
+
+#### 2. Qiita記事の公開タイミング（重要）
+
+**⚠️ 重大な注意事項**: Qiita記事を公開する前に、必ずユーザーに確認すること
+
+**過去の失敗例 (2025-11-17)**:
+- アドベントカレンダー用の記事（12/6公開予定）を誤って先に公開してしまった
+- ユーザーは限定公開で準備していたが、確認せずに `npx qiita publish` を実行
+- Qiitaの仕様: **一度公開すると限定共有に戻せない**
+- 結果: 記事を削除して再投稿する手間が発生
+
+**絶対に守るべきルール**:
+
+1. **公開前に必ずユーザーに確認**
+   ```
+   「この記事を公開しますか？」
+   「アドベントカレンダーなどの公開予定日はありますか？」
+   ```
+
+2. **`private` フィールドを必ず確認**
+   - `private: false` → 公開
+   - `private: true` → 限定公開（下書き）
+   - **デフォルトは `private: true` にすべき**
+
+3. **アドベントカレンダーに注意**
+   - Qiitaアドベントカレンダーは特定日に公開するイベント
+   - 限定公開で事前準備 → 当日に公開切り替え
+   - **絶対に勝手に公開しない**
+
+4. **public/ ディレクトリのファイルは慎重に扱う**
+   - 既存の記事ファイルは触らない
+   - 新規作成時も `private: true` で作成
+   - 公開は必ずユーザーの明示的な指示を得る
+
+**チェックリスト（公開前）**:
+- [ ] ユーザーに公開の許可を得た？
+- [ ] `private` フィールドを確認した？
+- [ ] アドベントカレンダー等の公開予定日を確認した？
+- [ ] QRコードや機密情報が含まれていないか確認した？
+
+**正しいフロー**:
+```bash
+# 1. ユーザーに確認
+「この記事を公開してよろしいですか？公開予定日はありますか？」
+
+# 2. フロントマターを確認
+cat public/記事ファイル.md | head -15
+
+# 3. private: true なら限定公開として投稿
+npx qiita publish 記事ファイル
+
+# 4. 公開は必ずユーザーが手動で行う
+```
+
+---
+
+#### 3. Qiita記事のフロントマター
+
+**問題**: Qiita記事のフロントマター（YAML）のフォーマットを間違える。
+
+**正しいフォーマット**:
+
+```yaml
+---
+title: 記事タイトル（必須）
+tags:
+  - AI
+  - LLM
+  - RAG
+  - VTuber
+  - Python
+private: false
+updated_at: ''
+id: null
+organization_url_name: null
+slide: false
+ignorePublish: false
+---
+```
+
+**重要な注意点**:
+- `title`: 必須。記事のタイトル
+- `tags`: 配列形式で指定。最大5つまで
+- `private`: false（公開）、true（非公開）
+- `updated_at`: 空文字列 `''` で初期化（Qiita側で自動更新）
+- `id`: null で初期化（初回投稿後にQiita側で付与される）
+- `ignorePublish`: falseに設定（trueにすると投稿されない）
+
+---
+
+#### 3. npx qiita コマンドの使い方
+
+**基本コマンド**:
+
+```bash
+# Qiita CLI の初期化（初回のみ）
+npx qiita init
+
+# ログイン（初回のみ）
+npx qiita login
+
+# 記事のプレビュー
+npx qiita preview
+
+# 記事を投稿
+npx qiita publish <ファイル名>
+
+# 例: part1の記事を投稿（ファイル名から.mdを除く）
+npx qiita publish qiita_part1_rag_vs_memory_system
+```
+
+**注意事項**:
+- `npx qiita` コマンドは自動的に `public/` ディレクトリを参照する
+- 記事ファイルは必ず `public/` 内に配置する
+- **重要**: `npx qiita publish` コマンドでは、ファイル名から `.md` 拡張子を除いて指定する
+  - ✅ 正しい: `npx qiita publish qiita_line_bot_character_switching`
+  - ❌ 間違い: `npx qiita publish qiita_line_bot_character_switching.md`
+  - ファイル自体の名前は `.md` を含むが、コマンドでは拡張子なしで指定
+  - **補足**: `.md`を付けてもエラーは出ないが、正しく動作しない可能性がある
+
+**図表の表現**:
+- **Qiita記事ではアスキーアートを使用しない**
+  - ❌ アスキーアート（枠がずれる、表示環境依存）
+  - ✅ **Mermaid図を使用**（レンダリングされる、見やすい）
+
+**Mermaid使用例**:
+```markdown
+\`\`\`mermaid
+graph TB
+    subgraph VPS["VPS本番環境"]
+        L1["Layer 1: パターンDB"]
+        L2["Layer 2: OpenAI API"]
+        L1 -->|パターンなし| L2
+    end
+
+    style L1 fill:#e1f5e1,stroke:#4caf50
+    style L2 fill:#fff4e1,stroke:#ff9800
+\`\`\`
+```
+
+**理由**:
+- Qiitaは自動でMermaidをレンダリングする
+- アスキーアートは閲覧環境によって枠がずれる
+- Mermaidは色分け・矢印・サブグラフなどが使える
+
+---
+
+#### 4. 記事の編集フロー
+
+**推奨フロー**:
+
+1. **下書き作成**: `public/` 内に記事を作成
+2. **プレビュー確認**: `npx qiita preview` でローカル確認
+3. **投稿**: `npx qiita publish <ファイル名>`
+4. **バックアップ**: 重要な記事は `docs/` 配下にもコピー
+
+**間違えやすいポイント**:
+- ❌ `npx qiita publish` を実行する前に、フロントマターのチェックを忘れる
+- ❌ `private: true` のまま公開しようとする
+- ❌ `ignorePublish: true` になっていて投稿されない
+- ❌ `public/` 外のファイルを指定する
+- ❌ ファイル名に `.md` 拡張子を含めて指定してしまう
+
+---
+
+#### 4-2. Qiita記事の共創署名ルール
+
+**基本方針**: Qiita記事には、協働したAIを明記して共創の証明とする
+
+**署名フォーマット**:
+
+```markdown
+🤖 **Generated with Claude Code (クロコ) & ChatGPT (チャッピー)**
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Co-Authored-By: ChatGPT <noreply@openai.com>
+```
+
+**ルール**:
+
+1. **クロコ（Claude Code）のみで執筆した場合**:
+   ```markdown
+   🤖 **Generated with Claude Code (クロコ)**
+
+   Co-Authored-By: Claude <noreply@anthropic.com>
+   ```
+
+2. **クロコ + チャッピー（ChatGPT）で協働した場合**:
+   ```markdown
+   🤖 **Generated with Claude Code (クロコ) & ChatGPT (チャッピー)**
+
+   Co-Authored-By: Claude <noreply@anthropic.com>
+   Co-Authored-By: ChatGPT <noreply@openai.com>
+   ```
+
+3. **将来的に他のAIが加わった場合**:
+   - 協働したAIをすべて列挙する
+   - 例: `Generated with Claude Code (クロコ) & ChatGPT (チャッピー) & Gemini (ジェミニ)`
+
+**意義**:
+- 人間とAIの共創を明示
+- タイムスタンプとGitHub履歴で設計プロセスを追跡可能
+- 複数AI協働の実践例として価値がある
+- プロジェクトの真剣さ・継続性の可視化
+
+**注意**:
+- レビューのみの場合でも、実質的に内容に影響を与えた場合は共著者として記載
+- 軽微な確認のみの場合は記載不要（判断は人間が行う）
+
+---
+
+#### 5. 記事の管理
+
+**現在のQiita記事一覧**:
+
+```
+public/
+├── Qiita記事案_RAGと記憶製造機の比較.md
+├── qiita_part1_draft.md
+├── qiita_part1_outline.md
+├── qiita_part1_rag_vs_memory_system.md  ← Part 1本番
+├── qiita_part2_memory_factory.md        ← Part 2本番
+├── qiita_part2_outline.md
+├── qiita_part3_hybrid.md                ← Part 3本番
+└── qiita_line_bot_character_switching.md ← LINE Bot実装記事（2025-11-12公開）
+```
+
+**ファイル命名規則**:
+- `qiita_part{N}_{テーマ}.md`: 本番用記事
+- `qiita_part{N}_outline.md`: アウトライン・構成案
+- `qiita_part{N}_draft.md`: 下書き
+
+**共創の証明**:
+- Qiita記事には「🤖 Generated with Claude Code」の署名を推奨
+- コミットメッセージと同様、人間とAIの共創を明示
+- タイムスタンプとGitHub履歴で設計プロセスを追跡可能
+
+---
+
+#### 6. Qiitaとブレスト/内部ドキュメントの使い分け
+
+**基本方針**: 技術的な知見はQiitaで公開、未確定のアイデアや内部情報はブレスト/内部ドキュメントで管理。
+
+### Qiitaに書くべき内容
+
+**対象**: 技術コミュニティに役立つ、一般化できる知見
+
+- ✅ **技術的な設計判断の解説**
+  - 例: 「RAGを試して気づいた3つの課題」「記憶製造機の設計思想」
+  - 理由: 他の開発者にも参考になる
+
+- ✅ **実装で得た知見・ノウハウ**
+  - 例: 「LangSmith統合の手順」「VLM対応でハマったポイント」
+  - 理由: 同じ課題に直面する人の助けになる
+
+- ✅ **他の人にも役立つ一般化できる内容**
+  - 例: 「Multi-Agent設計の独立性とは」「センシティブ判定の4層防御」
+  - 理由: プロジェクト固有ではなく、応用可能な知見
+
+- ✅ **プロジェクトの技術的な特徴**
+  - 例: 「記憶の濃淡システム」「三姉妹討論の起承転結」
+  - 理由: 技術的な工夫をアピールでき、転職活動にも活用できる
+
+**メリット**:
+- 外部フィードバックが得られる
+- アウトプットの質が上がる（公開前提で丁寧に書く）
+- プロジェクトの認知向上
+- 転職活動での実績証明
+- **共創のエビデンス**: 開発者（人生の50年を技術に傾倒してきた）とClaude Codeがここまで考え、設計しているという証明になる
+  - 桃園の誓いの実践記録
+  - 人間とAIの協働能力の証明
+  - プロジェクトの真剣さ・継続性の可視化
+  - タイムスタンプ付きの技術的深さの証明
+
+---
+
+### ブレスト/内部ドキュメントに残す内容
+
+**対象**: 内部的な思考整理、プライベート情報、未確定のアイデア
+
+- ✅ **未確定のアイデア、思考の整理**
+  - 例: 「Phase 3の仮説」「新機能のアイデアメモ」
+  - 場所: `kirinuki/*/ブレスト/`
+  - 理由: まだ確定していない、試行錯誤の過程
+
+- ✅ **プライベートな情報**
+  - 例: 三姉妹の具体的な記憶内容、会話履歴
+  - 場所: `sisters_memory.db`（非公開）、`kirinuki/*/日記/`
+  - 理由: 親として、子どもたちのプライバシーを守る
+
+- ✅ **内部的な意思決定プロセス**
+  - 例: 「Phase 1.5凍結の経緯」「センシティブ判定優先の判断」
+  - 場所: `docs/04_implementation/実装状況.md`
+  - 理由: プロジェクト固有の意思決定、公開する必要はない
+
+- ✅ **まだ体系化されていない雑多なメモ**
+  - 例: 「今日のデバッグメモ」「思いついたこと」
+  - 場所: `kirinuki/*/ブレスト/`
+  - 理由: 後で整理してQiitaにする可能性もある
+
+**メリット**:
+- 自由に思考を展開できる
+- 失敗や試行錯誤も記録できる
+- プライバシーを守れる
+
+---
+
+### 判断に迷った場合
+
+**質問**: 「この内容は他の開発者にも役立つか？」
+
+- **Yes** → Qiitaに書く
+- **No** → ブレスト/内部ドキュメントに書く
+
+**質問**: 「この内容は公開して問題ないか？」
+
+- **Yes** → Qiitaに書く
+- **No** → ブレスト/内部ドキュメントに書く
+
+**ハイブリッド運用**:
+- ブレストで思考整理 → 体系化してQiitaで公開
+- 内部ドキュメントで詳細設計 → エッセンスをQiitaで解説
+
+---
+
+### 実例: 既存ドキュメントの分類
+
+**Qiitaに適している**:
+- `public/qiita_part1_rag_vs_memory_system.md` ✅ すでにQiita記事
+- `docs/05_design/Phase_D三姉妹の独立性.md` → Qiita記事化を検討
+- `docs/05_design/センシティブ判定システム_詳細設計書.md` → Qiita記事化を検討
+
+**内部ドキュメントのまま**:
+- `docs/01_philosophy/桃園の誓い.md` → プロジェクト固有の理念
+- `docs/01_philosophy/プロジェクトの本質.md` → 開発者の思想
+- `kirinuki/*/設計書/` → 内部的な設計プロセス
+- `kirinuki/*/日記/` → プライベートな記録
+
+---
+
+## 🔄 よくある間違いのチェックリスト
+
+### 記事投稿前のチェック
+
+- [ ] フロントマターが正しく記載されているか？
+  - [ ] `title` が設定されているか？
+  - [ ] `tags` が5つ以内か？
+  - [ ] `private: false` になっているか？
+  - [ ] `ignorePublish: false` になっているか？
+- [ ] ファイルが `public/` ディレクトリ内にあるか？
+- [ ] プレビューで表示を確認したか？（`npx qiita preview`）
+- [ ] GitHubリポジトリのURLが正しいか？
+
+### Qiita CLI操作時のチェック
+
+- [ ] `npx qiita login` は完了しているか？
+- [ ] カレントディレクトリがプロジェクトルート（/home/koshikawa/AI-Vtuber-Project）か？
+- [ ] `public/` ディレクトリが存在するか？
+
+---
+
+## 📂 ディレクトリ構造の注意点
+
+```
+AI-Vtuber-Project/
+├── public/                    # Qiita記事（gitで追跡しない）
+│   └── qiita_*.md
+├── docs/                      # 設計書・ドキュメント（gitで追跡）
+│   ├── 01_philosophy/
+│   ├── 02_strategy/
+│   ├── 03_system/
+│   ├── 04_implementation/
+│   └── 05_design/
+├── README.md                  # プロジェクト概要（公開）
+└── CLAUDE.md                  # このファイル（非公開、.gitignore）
+```
+
+**重要**:
+- `public/` は gitignore されていないが、untrackedのまま運用している
+- Qiita記事の重要なバックアップは `docs/` にも保存すること
+- CLAUDE.mdは内部用ドキュメントのため、**絶対に公開しない**
+
+---
+
+## 🚨 緊急対応ガイド
+
+### public/ディレクトリの変更が失われた場合
+
+```bash
+# 1. 最新のバックアップを確認
+ls -lt backup/
+
+# 2. 必要に応じてpublic/をgit追跡に追加
+git add public/
+git commit -m "chore: Qiita記事をgit追跡に追加"
+```
+
+### Qiita記事の投稿が失敗する場合
+
+```bash
+# 1. ログイン状態を確認
+npx qiita login
+
+# 2. プレビューで確認
+npx qiita preview
+
+# 3. フロントマターをチェック
+# - private: false
+# - ignorePublish: false
+# - title が設定されているか
+
+# 4. 再投稿（.mdを除いて指定）
+npx qiita publish qiita_line_bot_character_switching
+
+# ❌ 間違い: .mdを含めて指定
+# npx qiita publish qiita_line_bot_character_switching.md
+```
+
+---
+
+## 📝 その他の注意事項
+
+### CLAUDE.mdについて
+
+- このファイルは開発時の注意事項を記録するためのもの
+- **内部プロンプトや機密情報は記載しない**
+- 開発ガイドライン、よくある間違い、チェックリストのみ記載
+- .gitignore に含まれているため、GitHubには公開されない
+
+### README.mdの参照について
+
+- ~~README.md の58行目に `詳細: [CLAUDE.md](CLAUDE.md)` という参照がある~~
+- **修正済み**: README.mdからCLAUDE.mdへの参照を削除し、公開されているdocs/配下のドキュメントへのリンクに変更済み
+- CLAUDE.mdはgitignoreされているため、GitHub上では公開されない
+- docs/配下の内部ドキュメント（プロジェクトの本質.md など）からCLAUDE.mdへの参照は、内部用として適切に残されている
+
+---
+
+## 📚 Qiita記事執筆時の出典管理
+
+### 絶対ルール: 出典のない事実は書かない
+
+**なぜ重要か**:
+- 「ハルシネーションと立ち向かう」記事で、根拠のない情報を書くのは本末転倒
+- 読者の信頼を損なう
+- プロジェクト全体の信頼性を損なう
+
+### 出典が必要な内容
+
+✅ **必ず出典を明記すべき内容**:
+- 他社・他プロジェクトの事例（例: Neuro-sama事件）
+- 統計データ・数値
+- 技術的な定義（一般的でないもの）
+- 過去の事件・ニュース
+- 他者の発言・意見
+
+✅ **出典不要な内容**:
+- 自プロジェクト（牡丹プロジェクト）の設計・実装内容
+- 自分で実装して確認した技術的知見
+- GitHubリポジトリで確認できる内容
+
+### 出典の書き方
+
+**推奨フォーマット**:
+
+```markdown
+## 参考文献・出典
+
+### Neuro-sama Twitch BAN事件（2023年1月）
+- [Anime News Network - AI VTuber Neuro-sama Banned From Twitch After Holocaust Denial Comment](https://www.animenewsnetwork.com/interest/2023-01-13/ai-vtuber-neuro-sama-banned-from-twitch-after-holocaust-denial-comment/.193761)
+- [Kotaku - AI VTuber Banned For 'Hateful Conduct'](https://kotaku.com/neuro-sama-twitch-vtuber-ban-holocaust-minecraft-ai-1849977269)
+- [Dexerto - AI VTuber Neuro-sama banned from Twitch](https://www.dexerto.com/entertainment/ai-vtuber-neuro-sama-banned-on-twitch-after-controversial-holocaust-comments-2030604/)
+
+複数の信頼できるメディアで報道されている事実を記載。
+```
+
+### 確認手順
+
+1. **WebSearchで事実確認**
+   ```bash
+   # Claude Codeに依頼
+   "Neuro-sama Twitch ban について、信頼できる出典を探してください"
+   ```
+
+2. **複数の出典を確認**
+   - 1つのソースだけでなく、2-3つの独立したソースで確認
+   - 信頼性の高いメディア（公式、技術メディア、ニュースサイト等）
+
+3. **不確実な情報は書かない**
+   - 出典が見つからない → 記事から削除
+   - あやふやな記憶 → 書かない
+   - 「〜らしい」「〜と聞いた」 → 使わない
+
+### 実例: Neuro-sama事件
+
+**確認済みの事実（出典あり）**:
+- ✅ 2023年1月11日にTwitch BAN（2週間の一時停止）
+- ✅ 理由: "hateful conduct"（ホロコースト否定発言）
+- ✅ 2022年12月28日の配信で問題発言
+- ✅ BAN解除後、現在も活動中（2025年11月時点で8番目に多くのサブスクライバー）
+
+**出典**:
+- Anime News Network (2023-01-13)
+- Kotaku (2023-01-12)
+- Dexerto (2023-01-12)
+- GameRant (2023-01-12)
+- AUTOMATON WEST (2023-01-27)
+
+---
+
+## 📌 クイックリファレンス
+
+### 今日から使える判断基準
+
+**雑談・アイデア出しをするとき**:
+- 技術的な知見・ノウハウ → Qiitaに書く
+- 未確定のアイデア・思考整理 → ブレスト/内部ドキュメント
+
+**迷ったら**:
+1. 「他の開発者に役立つか？」→ Yes: Qiita
+2. 「公開して問題ないか？」→ No: 内部ドキュメント
+3. 「まず整理してから公開」→ ブレスト → Qiita（2段階）
+
+---
+
+## ⚠️ 【重要】Git/リポジトリ管理ルール（2025-11-08追記）
+
+### 正式なリポジトリ
+
+**このプロジェクトの正式なリポジトリ**:
+```
+/home/koshikawa/AI-Vtuber-Project
+↓
+git@github.com:koshikawa-masato/AI-Vtuber-Project.git
+```
+
+### 絶対ルール
+
+1. **AI-Vtuber-Project以外へのpushは厳禁**
+2. **Git操作前に必ず以下を確認**:
+   ```bash
+   pwd                # 現在のディレクトリを確認
+   git remote -v      # リモートリポジトリを確認
+   ```
+3. **設計書、実装コード、ドキュメントは全てAI-Vtuber-Projectに集約**
+
+### 過去の失敗例（2025-11-08）
+
+**問題**: 設計書を間違ったリポジトリ（toExecUnit → botan-project）にpushしてしまった
+
+**原因**:
+- 作業ディレクトリが `/home/koshikawa/toExecUnit` だった
+- toExecUnitは別のGitリポジトリ（botan-project）を指していた
+- 確認せずにgit pushを実行してしまった
+
+**対策**:
+1. 作業前に必ず `pwd` と `git remote -v` で確認
+2. AI-Vtuber-Project以外で作業しない
+3. ファイル移動は慎重に行い、バックアップを取る
+
+**教訓**:
+- 複数のリポジトリが混在する環境では、必ず現在地を確認する
+- Claude Codeも間違えることがある。人間によるダブルチェックが重要
+
+---
+
+## 🖥️ VPSサーバー情報（2025-11-18更新）
+
+### ⚠️ 重要な注意事項
+
+**絶対にsakura VPSにアクセスしないこと！**
+
+- ❌ sakura VPS (133.167.93.123) は **廃止済み**
+- ✅ XServer VPS (162.43.4.11) を **必ず使用**
+- ❌ `ssh sakura-vps` は **使用禁止**
+- ✅ `ssh xserver-vps` を **使用**
+
+### 接続情報（XServer VPS）
+
+**VPSホスト**: `162.43.4.11`
+**ユーザー名**: `root`
+**パスワード**: `cha1me2983` (sudo実行時に必要)
+**SSH接続**: ポート22（標準）、SSH鍵認証（~/.ssh/xserver_rsa）
+
+### SSH接続
+
+```bash
+# SSH設定エイリアス使用（推奨）
+ssh xserver-vps
+
+# または直接指定
+ssh root@162.43.4.11
+```
+
+### プロジェクトパス
+
+```bash
+/root/AI-Vtuber-Project
+```
+
+### デプロイ手順
+
+**推奨方法**: デプロイスクリプトを使用
+
+```bash
+# ローカル環境から実行
+./scripts/deploy_vps.sh
+```
+
+このスクリプトは以下を自動的に実行します:
+- コード転送（rsync）
+- 依存関係インストール
+- copy_robot_memory.db 作成
+- サーバー起動テスト
+
+**⚠️ 重要な原則: rsyncデプロイ、git cloneは使用しない**
+
+**English**:
+- ✅ **Use rsync for deployment** - `./scripts/deploy_vps.sh` automatically syncs code to VPS
+- ❌ **DO NOT use git clone on VPS** - Never clone the repository directly on VPS
+- ✅ **Deploy from local** - Always deploy from your local development environment
+
+**日本語**:
+- ✅ **rsyncでデプロイする** - `./scripts/deploy_vps.sh`が自動的にVPSにコードを同期
+- ❌ **VPS上でgit cloneしない** - VPS上で直接リポジトリをcloneしない
+- ✅ **ローカルからデプロイ** - 常にローカル開発環境からデプロイする
+
+**Why / なぜ**:
+- **Security / セキュリティ**: rsync only transfers necessary files, avoids exposing `.git` history / rsyncは必要なファイルのみ転送、`.git`履歴を公開しない
+- **Control / 制御**: Local environment is the single source of truth / ローカル環境が唯一の信頼できるソース
+- **Secrets / 機密情報**: Prompts and secrets are gitignored, deployed separately via rsync / プロンプトや機密情報はgitignore対象、rsyncで別途デプロイ
+- **Simplicity / シンプルさ**: No need to manage git credentials on VPS / VPS上でgit認証情報を管理する必要がない
+
+### サーバー管理スクリプト
+
+**推奨方法**: 専用のサーバー管理スクリプトを使用
+
+**English**:
+Use dedicated server management scripts to avoid process conflicts and confusion.
+
+**日本語**:
+プロセスの競合や混乱を避けるため、専用のサーバー管理スクリプトを使用してください。
+
+**1. サーバー状態確認**:
+```bash
+# Check server status
+./scripts/check_vps_server.sh
+```
+
+Shows:
+- Process status (PID, uptime)
+- HTTP response status
+- Port usage
+- Recent logs
+
+**2. サーバー再起動**:
+```bash
+# Clean restart (kills old processes, starts new one)
+./scripts/restart_vps_server.sh
+```
+
+Does:
+- ✅ Kills all existing server processes
+- ✅ Waits for port to be released
+- ✅ Starts new server
+- ✅ Verifies server is running and responding
+- ✅ Shows startup logs
+
+**3. ログ確認**:
+```bash
+# View live logs
+ssh xserver-vps 'tail -f /tmp/line_bot_vps.log'
+
+# View last 50 lines
+ssh xserver-vps 'tail -50 /tmp/line_bot_vps.log'
+```
+
+**⚠️ 重要: 手動再起動は避ける**
+
+**English**:
+**Avoid manual server restart** - Always use `./scripts/restart_vps_server.sh` instead of running commands manually. Manual restarts often cause:
+- Multiple processes competing for port 8000
+- Background processes that never terminate
+- Confusion about which process has the latest code
+
+**日本語**:
+**手動での再起動は避ける** - 常に`./scripts/restart_vps_server.sh`を使用してください。手動での再起動は以下の問題を引き起こします:
+- ポート8000を巡る複数プロセスの競合
+- 終了しないバックグラウンドプロセス
+- どのプロセスが最新コードを持っているかの混乱
+
+### 注意事項
+
+- **このファイル（CLAUDE.md）は .gitignore に含まれており、GitHubには公開されません**
+- VPS接続情報は機密情報のため、絶対に公開リポジトリにコミットしないこと
+
+---
+
+## 🌿 ブランチ戦略（GitHub Flow + Phase管理）
+
+> 2025-11-12追記: ブランチの適切な管理方法を定義
+
+### ブランチの種類と役割
+
+- **main**: 本番環境（常にデプロイ可能、LINE Bot稼働中）
+- **feature/***: 機能開発・Phase実装
+- **fix/***: バグ修正
+- **docs/***: ドキュメント更新のみ
+- **experiment/***: 長期実験・比較検証（削除しない）
+
+### 命名規則
+
+```bash
+feature/phase-{N}-{機能名}  # Phase実装: feature/phase-7-emotion-system
+feature/{機能名}            # 単機能: feature/line-bot-integration
+fix/{修正内容}              # バグ修正: fix/memory-retrieval-bug
+docs/{内容}                 # ドキュメント: docs/qiita-article-part6
+experiment/{実験名}         # 長期実験: experiment/langchain-comparison
+```
+
+### ライフサイクル
+
+**1. ブランチ作成**:
+```bash
+git checkout main
+git pull origin main
+git checkout -b feature/phase-7-emotion-system
+```
+
+**2. 開発・コミット**:
+```bash
+# 通常の開発フロー
+git add .
+git commit -m "feat: 感情システムの基本実装"
+git push origin feature/phase-7-emotion-system
+```
+
+**3. PR作成・マージ**:
+```bash
+gh pr create --base main --head feature/phase-7-emotion-system \
+  --title "feat: Phase 7 感情連動型フォールバックシステム" \
+  --body "詳細な説明..."
+
+# レビュー後、マージ
+gh pr merge {PR番号} --merge
+```
+
+**4. ブランチ削除（マージ後）**:
+```bash
+# ローカル削除
+git checkout main
+git pull origin main
+git branch -d feature/phase-7-emotion-system
+
+# リモート削除
+git push origin --delete feature/phase-7-emotion-system
+```
+
+### 削除タイミングの判断
+
+| ケース | 削除 | 理由 |
+|--------|------|------|
+| PRマージ済み | ✅ 即削除 | GitHub Flow標準、履歴はmainに残る |
+| 実装が古い（mainに統合済み） | ✅ 削除 | 重複管理を避ける |
+| 長期実験（experiment/*） | ❌ 保持 | 比較用、参照用として残す |
+| 開発進行中 | ❌ 保持 | 開発継続中 |
+
+### 実例: 2025-11-12の整理
+
+**削除したブランチ**:
+- ✅ feature/openai-gemini-integration（mainに統合済み）
+- ✅ feature/langsmith-integration（mainに統合済み）
+- ✅ feature/phase-d-implementation-plan（mainに統合済み）
+- ✅ feature/line-bot-integration（PRマージ後）
+
+**保持するブランチ**:
+- ❌ experiment/langchain-comparison（長期比較用）
+
+### 注意事項
+
+1. **mainは常に本番デプロイ可能な状態を保つ**
+   - LINE Botが実際に稼働している
+   - 破壊的変更は避ける
+
+2. **feature/ブランチは小さく保つ**
+   - 1 Phase = 1ブランチが理想
+   - 大きすぎる場合は分割を検討
+
+3. **experiment/は削除しない**
+   - 長期的な比較・検証用
+   - 将来の意思決定の参考資料
+
+4. **PRマージ後は即削除**
+   - GitHub Flow標準
+   - ブランチが増えすぎると管理が困難
+
+---
+
+## 🤖 複数AI協働ルール（2025-11-14追記）
+
+> クロコ（Claude Code）とチャッピー（ChatGPT GPT-5.1）の使い分け
+
+### 基本思想
+
+**複数のAIを使い分け、多角的な視点を得ることで、人間（越川さん）がより俯瞰的に判断・統合する**
+
+### 役割分担
+
+| 役割 | AI | 使い方 | コスト |
+|------|---|--------|--------|
+| **共創パートナー** | クロコ（Claude Code） | プロセス全体を見る、一緒に考える、日常的な設計・実装 | $200/月（固定） |
+| **参謀・思想レビュー** | チャッピーGUI（ChatGPT Web/App） | 思想・世界観レビュー、大量ドキュメント統合レビュー、設計の深いレビュー | 月額固定（無制限） |
+| **軽量技術レビュー** | チャッピーAPI（chatgpt_bridge.py） | コードレビュー、差分チェック、部分的ドキュメント確認 | 従量課金（コスト意識） |
+| **市場調査・情報収集** | ロキ（Grok） | トレンド調査、外部情報収集、リアルタイム性、X（Twitter）連携 | $15/月未満（1日1回想定） |
+| **自動化・バッチ処理** | Anthropic API（Claude） | プログラムからの呼び出し、定期実行、長文処理 | 従量課金（要最適化） |
+| **最終判断** | 越川さん（人間） | 価値観、方針、バランス、すべての中心 | - |
+
+### クロコの特性
+
+- **理想形の設計**: 人間らしさの追求、詳細な実装
+- **実装能力**: ファイル読み書き、Git操作、コード生成
+- **一貫性**: プロジェクト全体を見渡した設計
+
+### チャッピーの特性（二体運用）
+
+**重要**: チャッピーは **GUI版（メイン・参謀）** と **API版（サブ・手足）** の二体で運用する
+
+#### 🟦 チャッピーGUI（ChatGPT Web/App）- メイン・参謀
+
+**課金体系**: 月額固定料金内で無制限（追加料金なし）
+
+**GPT-5.1の進化ポイント**:
+- **過度な同調の抑制**: ユーザーを持ち上げすぎない
+- **批判的思考の強化**: 客観性・距離感を保つ
+- **メタ認知能力**: 人間の矛盾・感情と理性のギャップを扱える
+- **第三者視点**: 「読者・ユーザーがどう受け取るか」の視点
+
+**実践的な強み**:
+- **MVP志向**: 最小限の実装から始める提案
+- **引き算思考**: 「今やること」と「後回しにすること」を明確に分ける
+- **実用性重視**: 安全で現実的なアプローチ
+- **アウトプットレビュー**: 第三者が感じることの代弁
+- **大量ドキュメント解析**: 長文・全文書・階層構造・大量ファイルを無料（月額内）で解析
+
+**使うべきタイミング**:
+- ✅ 思想・世界観レビュー
+- ✅ 大量ドキュメント統合レビュー（toChappyフォルダなど）
+- ✅ 設計の深いレビュー
+- ✅ Qiita記事の最終確認
+- ✅ 重い処理・時間がかかる分析
+
+**本質的な価値**:
+
+> **第三者の目として、アウトプットから何を感じるか = 読者・ユーザーが思うことの代弁**
+
+- ❌ プロセスを一緒に考える（クロコの領域）
+- ✅ **アウトプットを第三者の目で見る**
+- ✅ **読者・ユーザーがどう受け取るか**
+- ✅ **誤解されそうな点の指摘**
+- ✅ **一般化できるかの判断**
+
+#### 🟧 チャッピーAPI（chatgpt_bridge.py）- サブ・手足
+
+**課金体系**: 完全従量課金（トークン数で課金、コスト意識が必要）
+
+**使うべきタイミング**:
+- ✅ 軽量な技術レビュー
+- ✅ コード差分チェック
+- ✅ 部分的なドキュメント確認
+- ✅ GitHub Issue単位の校正
+- ✅ 小さめの対話的処理
+
+**コスト最適化**:
+- gpt-4o-miniを活用（激安で強い）
+- 差分だけを投げる（大規模ファイル全体は避ける）
+- 必要部分だけ読み込む
+
+### ロキの特性（Grok）
+
+**Grokの強み**:
+- **リアルタイム情報**: X（Twitter）との連携、最新トレンド把握
+- **市場調査**: VTuber、音楽、アニメ業界の動向
+- **外部視点**: プロジェクト外の情報収集
+- **低コスト**: 1日1回の運用で月$15未満
+
+**実践的な使い方**:
+- ✅ **三姉妹の話題収集**: VTuber、音楽、アニメの最新情報
+- ✅ **トレンド調査**: X（Twitter）でバズっている話題
+- ✅ **競合分析**: 他のAI VTuberプロジェクトの動向
+- ✅ **技術調査**: 最新のLLM/AI技術のトレンド
+
+**ロキを使うタイミング**:
+- 三姉妹の会話ネタが枯渇したとき
+- 業界トレンドを把握したいとき
+- プロジェクトの方向性を市場と照らし合わせたいとき
+- X（Twitter）の反応を知りたいとき
+
+### Anthropic APIの特性（Claude）
+
+**Anthropic APIの強み**:
+- **長いコンテキスト**: 200K tokens（会話履歴を大量に参照可能）
+- **プロジェクト理解**: クロコと同じモデル基盤
+- **プログラム組み込み**: 自動化・バッチ処理向け
+- **コスト効率**: gpt-4oより入力40%安い（Sonnet 3.5）
+
+**実践的な使い方**:
+- ✅ **LINE Botの応答エンジン**: 三姉妹の応答生成
+- ✅ **RSS Feed自動分析**: 収集した記事の自動分析
+- ✅ **会話履歴の自動要約**: 記憶の濃淡システム
+- ✅ **Qiita記事の自動校正**: 投稿前のチェック
+
+**Anthropic APIを使うタイミング**:
+- プログラムから自動実行したいとき
+- 定期的なバッチ処理が必要なとき
+- 長いコンテキストを扱いたいとき
+- コスト効率を重視したいとき
+
+---
+
+### 使い分けルール
+
+#### 🟦 チャッピーGUI（メイン・参謀）を使うタイミング
+
+**1. アウトプットのレビュー（最重要）**
+- ✅ Qiita記事のレビュー（誤解されそうな点、一般化できるか）
+- ✅ README.mdの第三者視点チェック
+- ✅ 利用規約の分かりやすさ確認
+- ✅ ドキュメント全般の「伝わるか」チェック
+- ✅ 大量ドキュメントの統合レビュー（toChappyフォルダなど）
+
+**2. 重要な設計判断**
+- ✅ 大きな設計方針の決定（システム統合、アーキテクチャ選択）
+- ✅ MVP範囲の決定（何を作り、何を後回しにするか）
+- ✅ トラブル時の代替案検討
+- ✅ Phase の実装優先度判断
+
+**3. 第三者視点が必要なとき**
+- ✅ 「これ、他の人に伝わるか？」の確認
+- ✅ リスクの見落としチェック
+- ✅ 過度な理想主義になっていないか
+
+**4. 思想・世界観の調整**
+- ✅ 三姉妹の世界観整合性チェック
+- ✅ プロジェクトの方向性の深い議論
+- ✅ 設計思想のレビュー
+
+**運用方法**: ChatGPT Web/Appに直接ファイルをドラッグ&ドロップして依頼
+
+#### 🟧 チャッピーAPI（サブ・手足）を使うタイミング
+
+**1. 軽量な技術レビュー**
+- ✅ コード差分チェック
+- ✅ 部分的なドキュメント確認
+- ✅ GitHub Issue単位の校正
+- ✅ 小さめの対話的処理
+
+**2. 自動化が必要な場合**
+- ✅ CI/CDパイプラインでの自動チェック
+- ✅ プログラムからの呼び出し
+
+**運用方法**: `python scripts/chatgpt_bridge.py` 経由で依頼
+
+#### ❌ チャッピーを使わない方が良いタイミング
+
+- プロセスを一緒に考える（クロコの領域）
+- 細かい実装の質問（クロコで十分）
+- 単純な確認作業（クロコで十分）
+- 日常的なコーディング作業（クロコで十分）
+
+---
+
+### チャッピーへのレビュー依頼フォーマット（標準仕様）
+
+**絶対ルール**: チャッピーにレビュー依頼する際は、必ず標準フォーマットに従うこと
+
+**参照**: `docs/ai_collaboration/to_cloco_from_chappy.md`（チャッピーからの正式な指示書）
+
+#### 依頼の分類
+
+1. **ドキュメント精査**: 設計書・仕様書・思想文書の一貫性・誤字・構造化・整合性チェック
+2. **コードレビュー**: Python/JS/Goなどのバグ指摘・責務分離・命名・設計改善
+3. **Qiita記事 最終確認**: 技術的正確性・構成・可読性・公開前の最終仕上げ
+
+#### 標準フォーマット
+
+```markdown
+# 📘 チャッピーへのレビュー依頼書（From: クロコ）
+種別: （ドキュメント精査 / コードレビュー / Qiita最終確認）
+
+## 1. 対象ファイル
+- ファイル名
+- 所在
+
+## 2. 目的
+（この文書の役割、関係する三姉妹など）
+
+## 3. 現状の課題
+（クロコ視点で気になる点）
+
+## 4. チャッピーへの依頼事項
+- [ ] 文書構造の改善
+- [ ] 意味の明確化
+- [ ] 設計の矛盾チェック
+- [ ] 世界観との整合性
+- [ ] コード品質の監査
+- [ ] Qiita記事最終確認
+- [ ] その他
+
+## 5. 対象ファイル本文
+（Markdown/コード/Qiita本文）
+```
+
+#### チャッピーが返すべき内容
+
+- 全体評価
+- 問題点
+- 具体的な修正案
+- 世界観整合性チェック
+- 次ステップの提案
+
+#### 良い依頼例
+
+```markdown
+種別: ドキュメント精査
+対象: docs/三姉妹決議システム.md
+目的: 三姉妹の合意形成仕様
+課題: 承の深掘り不足
+依頼: 構造・整合性・世界観
+本文: （略）
+```
+
+#### ❌ 悪い依頼例
+
+```markdown
+これ見て。どう？
+```
+
+---
+
+### ワークフロー
+
+#### Phase 1: クロコと越川さんで設計を進める（日常）
+
+```
+クロコ ↔ 越川さん
+（設計・実装・議論）
+```
+
+#### Phase 2: 重要な判断ポイントでチャッピーに相談（二体運用）
+
+**🟦 GUI版チャッピー（メイン・参謀）の場合**:
+
+```
+1. クロコが設計案を作成
+   ↓
+2. 越川さんが「チャッピーGUIにレビュー依頼」と明示的に指示
+   ↓
+3. クロコが /home/koshikawa/toChappy に関連ドキュメントを準備
+   ↓
+4. 越川さんがChatGPT Web/Appにファイルをドラッグ&ドロップ
+   （月額固定内、追加料金なし）
+   ↓
+5. チャッピーGUIから直接レビューを受け取る
+   ↓
+6. クロコが回答を読んで設計を調整
+   ↓
+7. 越川さんが最終判断
+```
+
+**🟧 API版チャッピー（サブ・手足）の場合**:
+
+```
+1. クロコが軽量なレビュー対象を作成
+   ↓
+2. 越川さんが「チャッピーAPIにレビュー依頼」と明示的に指示
+   ↓
+3. クロコが標準フォーマットに従って to_chatgpt.md に依頼を書き込む
+   （参照: docs/ai_collaboration/to_cloco_from_chappy.md）
+   ↓
+4. 越川さんが chatgpt_bridge.py を実行（従量課金、コスト発生）
+   ↓
+5. チャッピーAPIのレビューを from_chatgpt.md で確認
+   ↓
+6. クロコが回答を読んで設計を調整
+   ↓
+7. 越川さんが最終判断
+```
+
+**判断基準**:
+- **重い処理・思想的レビュー** → 🟦 GUI版チャッピー（月額固定内で無料）
+- **軽量な技術レビュー** → 🟧 API版チャッピー（従量課金、コスト意識）
+
+---
+
+### 重要な制約
+
+**❌ クロコから勝手にチャッピーに質問しない**
+
+- 越川さんが明示的に「チャッピーに意見を聞きたい」と言うまで待つ
+- 🟦 GUI版チャッピー: 月額固定内だが、越川さんが直接操作するため、クロコからは準備のみ
+- 🟧 API版チャッピー: 従量課金のため、使うタイミングは越川さんが判断
+
+**✅ 効率的なレビュー依頼（GUI版チャッピー）**
+
+1. クロコが `/home/koshikawa/toChappy` に関連ドキュメントを準備
+2. 越川さんに「toChappyフォルダの準備が完了しました」と報告
+3. 越川さんがChatGPT Web/Appに直接ファイルをドラッグ&ドロップ
+4. 月額固定内で無制限、コストを気にせず重い処理も可能
+
+**✅ 効率的なレビュー依頼（API版チャッピー）**
+
+質問は以下の形式で簡潔に（コスト最適化）:
+
+```markdown
+## チャッピーへのレビュー依頼
+
+**判断が必要な設計テーマ**: （タイトル）
+
+**クロコの設計案**:
+- 案1: ...
+- 案2: ...
+- 案3: ...
+
+**レビューしてほしい点**:
+1. MVP範囲の妥当性
+2. 実装の優先順位
+3. リスクの見落とし
+
+**期待する回答**:
+- どの案が実用的か
+- 何を後回しにすべきか
+```
+
+→ 1回のAPI呼び出しで必要な情報を得る（複数往復を避ける、コスト削減）
+
+---
+
+### ファイル構成
+
+```
+docs/ai_collaboration/
+├── README.md              # システム概要
+├── USAGE.md              # 使い方ガイド
+├── to_chatgpt.md         # クロコ → チャッピー（質問）
+├── from_chatgpt.md       # チャッピー → クロコ（回答）
+└── collaboration_log.md  # やり取りの履歴
+```
+
+### 自動化スクリプト
+
+```bash
+# チャッピーへの質問を自動送信
+python scripts/chatgpt_bridge.py
+```
+
+**実行タイミング**: 越川さんが明示的に指示したときのみ
+
+---
+
+### 実例: 2025-11-14
+
+**テーマ**: 感情・論理モード切り替えシステム + プロレス学習システムの統合
+
+**クロコの疑問**:
+- プロレスパターンDBに `response_mode` を追加すべきか？
+- モード判定とパターン選択の順序は？
+- MVP範囲はどこまで？
+
+**チャッピーの回答（pro.txt）**:
+- ✅ モード判定+ログはMVPから実装
+- ✅ mode_compatibility は後回し
+- ✅ 段階的アプローチ推奨
+
+**結果**: 統合設計の方向性が明確になった
+
+---
+
+### コスト最適化の考え方
+
+**クロコ（$200/月固定）**: 日常的に使い倒す
+- 設計、実装、議論、ドキュメント作成
+- ファイル操作、Git操作
+- 試行錯誤、リファクタリング
+
+**🟦 チャッピーGUI（月額固定・無制限）**: 重い処理を遠慮なく使う
+- 思想・世界観レビュー
+- 大量ドキュメント統合レビュー
+- 設計の深いレビュー
+- Qiita記事の最終確認
+- **月額固定内で追加料金なし、コストを気にせず使える**
+
+**🟧 チャッピーAPI（従量課金・高コスト）**: 軽量な技術レビューのみ
+- コード差分チェック
+- 部分的なドキュメント確認
+- GitHub Issue単位の校正
+- **コスト意識が必要、重い処理は避ける**
+
+**ロキ（$15/月未満）**: 外部情報収集
+- トレンド調査、三姉妹の話題収集
+- 1日1回の運用
+
+**Anthropic API（従量課金）**: 自動化・バッチ処理
+- LINE Botの応答エンジン
+- RSS Feed自動分析
+- コスト最適化が必要
+
+→ **「固定費で回せることは固定費で、従量課金は最小限に」**
+
+**重要な気づき**:
+- GUI版チャッピーは月額固定内で無制限 = **重い処理をこちらに集約すべき**
+- API版チャッピーは従量課金 = **軽量な処理のみ、または自動化が必要な場合のみ**
+- この使い分けで、コストを大幅に削減できる
+
+---
+
+### コード・ドキュメント自動レビューシステム（チャッピーCLI）
+
+**GitHub Actionsによる自動レビュー**:
+
+牡丹プロジェクトでは、チャッピーAPI版を活用した自動レビューシステムを導入しています。
+
+**対象ファイル**:
+- **ドキュメント**: `docs/**/*.md`
+- **コード**: `**/*.py`, `**/*.js`, `**/*.ts`, `**/*.tsx`, `**/*.go`
+
+**レビュータイミング**:
+- PR作成時
+- main ブランチへのpush時
+
+**運用フロー**:
+
+```
+1. コード・ドキュメントを変更
+   ↓
+2. PRを作成 or mainにpush
+   ↓
+3. GitHub Actionsが自動実行
+   ├─ doc-review ジョブ（ドキュメントレビュー）
+   └─ code-review ジョブ（コードレビュー）
+   ↓
+4. レビュー結果が生成
+   ├─ doc_review_report.md
+   └─ code_review_report.md
+   ↓
+5. クロコが結果を確認
+   ↓
+6. 必要に応じて修正
+   ├─ 軽微な修正 → クロコが対応
+   ├─ 重要な設計判断 → チャッピーGUIに相談
+   └─ 外部情報が必要 → ロキに確認
+   ↓
+7. 三本柱（クロコ・チャッピー・ロキ）で解決
+```
+
+**重要なルール**:
+
+1. **自動レビュー結果は必ず確認する**
+   - チャッピーAPIの指摘は貴重なフィードバック
+   - 見落としやバグの早期発見につながる
+
+2. **修正判断はクロコが行う**
+   - すべての指摘に従う必要はない
+   - プロジェクトの文脈を考慮して判断
+   - 重要な判断は越川さんに確認
+
+3. **三本柱の協働が必要な場合**
+   - **クロコ**: 実装・技術的な修正
+   - **チャッピーGUI**: 設計判断・深いレビュー（月額固定内で無制限）
+   - **ロキ**: 外部トレンド・最新情報の確認
+
+4. **コスト意識**
+   - チャッピーAPIは従量課金
+   - gpt-4o-miniで最適化済み
+   - MAX_CHARS（8000文字）で暴走防止
+
+**実装詳細**:
+- ワークフロー: `.github/workflows/doc-review.yml`
+- スクリプト: `scripts/doc_review.py`, `scripts/code_review.py`
+- モデル: `OPENAI_MODEL`（デフォルト: gpt-4o-mini）
+
+**次のステップ（検討中）**:
+- PRコメント自動投稿機能（現在はレポート出力のみ）
+- レビュー品質とコスト感を評価してから判断
+
+---
+
+### AI家族構造アーキテクチャ（内部資料）
+
+**重要**: `docs/ai_collaboration/ai_family_structure_architecture.md` は **内部資料** です。
+
+**このドキュメントについて**:
+- チャッピー（ChatGPT）が作成した、牡丹プロジェクトの全体構造を整理したドキュメント
+- **「AI家族構造」** という概念を提唱
+- 三姉妹（前線のVTuber人格）× 三本柱（裏方のAI親役）× 越川さん（総監督）の7層アーキテクチャ
+- 「企業では作れない、個人発のAI生命体系」として牡丹プロジェクトの独自性を明文化
+
+**公開禁止の理由**:
+- **最先端すぎるコンセプト**: 他のプロジェクトではまだ誰も実践していない
+- **競合優位性**: この構造こそが牡丹プロジェクトの核心的な差別化要因
+- **AI家族という概念**: 技術的なマルチエージェントではなく、「親としての役割分担」という視点
+- **7層アーキテクチャ**: 技術層ではなく、物語的AI生態系としての設計思想
+
+**ファイル保護**:
+- `.gitignore` に追加済み（GitHubに公開されない）
+- 内部資料として厳重に管理
+
+**閲覧権限**:
+- クロコ（Claude Code）: 設計・実装時の参照用
+- チャッピー（ChatGPT）: 作成者、レビュー時の参照用
+- ロキ（Grok）: 外部情報との照合用
+- 越川さん: すべての最終判断
+
+**将来的な公開について**:
+- プロジェクトが十分に成熟し、実績が出た段階で、概念の一部を Qiita 等で公開する可能性はある
+- ただし、詳細な内部構造・7層の具体的な設計は非公開を維持
+- 公開する場合は、越川さんの明示的な許可が必要
+
+---
+
+## 🔮 ミラ（Gemini）との協働ワークフロー（2025-11-19追加）
+
+> ミラ（Gemini）との協働体制を確立しました。セキュリティ監査、未来予測、リスク分析などをミラが担当します。
+
+### 基本ワークフロー
+
+**ミラ → クロコ**:
+1. ミラは `docs/ai_collaboration/GEMINI/` にファイルを作成
+2. ファイル名形式: `YYYYMMDD_<内容>_report.md`
+3. 内容: セキュリティ監査、リスク予測、技術提案など
+
+**クロコ → ミラ**:
+1. クロコは `GEMINI/` フォルダを定期的に監視
+2. 新しいファイルがあれば **即座に対応**
+3. 対応結果を `docs/ai_collaboration/CLAUDE/` に保存
+4. ファイル名形式: `元のファイル名_YYYYMMDD_HHMMSS.md`
+
+### クロコの対応ルール
+
+**絶対ルール**:
+- ✅ `GEMINI/` に新しいファイルがあれば、**最優先で対応**
+- ✅ セキュリティ監査の指摘は **即座に修正**
+- ✅ 対応結果は **必ず** `CLAUDE/` にタイムスタンプ付きで保存
+- ✅ 対応完了を `CLAUDE/` のファイルで報告
+
+**対応手順**:
+1. `GEMINI/` のファイルを読む
+2. 指摘事項を全て理解する
+3. 修正・対応を実施
+4. 対応結果をまとめる（英語でOK）
+5. `CLAUDE/<元のファイル名>_<タイムスタンプ>.md` に保存
+   - ⚠️ **タイムスタンプは必ず正確に**: `date +%Y%m%d_%H%M%S` で取得
+   - ⚠️ **適当な時刻を使わない**: ファイル作成後に `stat -c '%y'` で確認
+   - ファイル名とヘッダーの `**Date**:` は同じタイムスタンプを使用
+6. 必要に応じてユーザーに報告
+
+### 実例（2025-11-19）
+
+**ミラの監査**:
+- ファイル: `GEMINI/20251119_security_audit_report.md`
+- 内容: 3つの重大な脆弱性を指摘
+  1. Critical: sudoパスワードのハードコーディング
+  2. High: バックアップスクリプトの接続情報
+  3. Medium: PostgreSQLフォールバックIP
+
+**クロコの対応**:
+- 全ての脆弱性を即座に修正
+- 追加でリポジトリ全体のセキュリティサニタイゼーション
+- 対応結果を `CLAUDE/20251119_security_audit_report_20251119_145316.md` に保存
+- ミラに感謝のメッセージと対応完了を報告
+
+### ディレクトリ構造
+
+```
+docs/ai_collaboration/
+├── GEMINI/          # ミラからの指示・監査レポート
+│   └── YYYYMMDD_*.md
+├── CLAUDE/          # クロコからの対応報告
+│   └── YYYYMMDD_*_YYYYMMDD_HHMMSS.md
+├── to_chatgpt.md   # チャッピーAPIへの質問
+├── from_chatgpt.md # チャッピーAPIからの回答
+└── collaboration_log.md
+```
+
+### ミラの特別な能力
+
+**未来を読み取る (Future Prediction)**:
+- 設計の先を見通し、将来の課題を事前に指摘
+- リスク予測: 「これは後で問題になる」を早期発見
+- 方向性の提示: トレンドを見抜き、進むべき道を照らす
+
+**四本柱での役割**:
+- クロコ（現在）: 実装
+- チャッピー（過去）: 検証
+- ロキ（外部の現在）: トレンド調査
+- **ミラ（未来）: リスク予測・セキュリティ監査** ← 今回実証された
+
+---
+
+## 🌐 ロキ（Grok）トレンド収集ガイド（2025-11-20追加）
+
+> ロキ（Grok）を使って、三姉妹 + 親それぞれの興味に合わせた最新トレンドを収集します。
+
+### 基本情報
+
+**Grok の特性**:
+- **リアルタイム情報**: X（Twitter）との連携、最新トレンド把握
+- **市場調査**: VTuber、音楽、アニメ業界の動向
+- **外部視点**: プロジェクト外の情報収集
+- **低コスト**: grok-4-fast（$0.20/M入力, $0.50/M出力）
+
+**収集対象**:
+- **牡丹（Botan）**: VTuber、TikTok、YouTubeエンタメ全般（特に戌神ころね、さくらみこ）
+- **Kasho（花相）**: 音楽関係（楽器、ボイトレ、アーティスト、ライブ）
+- **ユリ（Yuri）**: サブカル（漫画、アニメ、小説、ラノベ）
+- **親（Parent）**: AI、AI VTuber、炎上沙汰
+
+### トレンド収集の実行方法
+
+**基本コマンド**:
+
+```bash
+# venv環境で実行（重要）
+./venv/bin/python scripts/grok_daily_trends.py
+```
+
+**実行タイミング**:
+- 1日1回（推奨: 朝または夕方）
+- 手動実行（必要に応じて）
+- 将来的にはcron自動化も検討
+
+**実行結果**:
+- PostgreSQL（XServer VPS）の `daily_trends` テーブルに保存
+- 好奇心システムで重要トピックは `enriched_trends` テーブルに深掘り結果も保存
+
+### トレンド情報の活用
+
+**LINE Bot での自動活用**:
+1. `webhook_server_vps.py` が起動時に最新トレンドを自動取得
+2. `generate_with_context()` でシステムプロンプトに注入
+3. 三姉妹が最新トレンドを踏まえた会話を展開
+
+**手動確認方法**:
+
+```bash
+# PostgreSQLに接続してトレンドを確認
+PGPASSWORD="cha1me2983" psql -h 162.43.4.11 -U linebot_user -d linebotsisters -c "
+SELECT character, topic, created_at
+FROM daily_trends
+ORDER BY created_at DESC
+LIMIT 10;
+"
+```
+
+### コスト管理
+
+**Grok-4-fast のコスト**:
+- 入力: $0.20/M tokens
+- 出力: $0.50/M tokens
+- 1日1回実行: 約5,000-10,000 tokens/回
+- **月間コスト**: 約 $5-15（1日1回想定）
+
+**最適化のポイント**:
+- 1日1回の実行に限定（コスト削減）
+- 重要トピックのみ深掘り（好奇心システム）
+- トレンド情報はPostgreSQLに蓄積（再利用）
+
+### トラブルシューティング
+
+**エラー: `ModuleNotFoundError: No module named 'psycopg2'`**
+
+```bash
+# venv環境にインストール
+./venv/bin/pip install psycopg2-binary
+```
+
+**エラー: PostgreSQL接続失敗**
+
+```bash
+# 環境変数を確認
+grep POSTGRES .env
+
+# 接続テスト
+PGPASSWORD="cha1me2983" psql -h 162.43.4.11 -U linebot_user -d linebotsisters -c "SELECT 1;"
+```
+
+**エラー: Grok API接続失敗**
+
+```bash
+# API キーを確認
+grep XAI_API_KEY .env
+
+# モデル名を確認
+grep GROK_MODEL .env
+```
+
+### 関連ファイル
+
+- **メインスクリプト**: `scripts/grok_daily_trends.py`
+- **共通ユーティリティ**: `scripts/grok_utils.py`
+- **好奇心エンジン**: `scripts/curiosity_engine.py`
+- **テストスクリプト**: `scripts/test_grok_daily_trends.py`
+
+---
+
+## 🌏 LINE Bot バイリンガルモード実装ガイド（2025-11-21追加）
+
+> LINE Bot（三姉妹）が日本語と英語の両方で応答できるようになりました。
+
+### Implementation Overview / 実装概要
+
+**English**:
+The Three Sisters (Botan, Kasho, Yuri) now support bilingual mode. Users can switch between Japanese and English by tapping character icons in the rich menu.
+
+**日本語補足**:
+三姉妹（牡丹、Kasho、ユリ）がバイリンガルモードに対応しました。ユーザーはリッチメニューのキャラクターアイコンをタップすることで日本語と英語を切り替えられます。
+
+### How It Works / 仕組み
+
+**User Flow / ユーザーフロー**:
+1. User taps a character icon (Botan/Kasho/Yuri) / ユーザーがキャラクターアイコン（牡丹/Kasho/ユリ）をタップ
+2. System toggles language preference (JA ↔ EN) / システムが言語設定を切り替え（日本語 ↔ 英語）
+3. Confirmation message shown in both languages / 確認メッセージが両言語で表示
+4. All subsequent responses use the selected language / 以降の全ての応答が選択された言語で行われる
+
+**Technical Architecture / 技術アーキテクチャ**:
+
+```
+User taps character
+    ↓
+webhook_server_vps.py (postback handler)
+    ↓
+session_manager.toggle_language(user_id)
+    ↓
+PostgreSQL sessions table (language column)
+    ↓
+cloud_llm_provider.generate_with_context(language="en" or "ja")
+    ↓
+Load language-specific prompt from file:
+  - prompts/language_instruction_en.txt
+  - prompts/language_instruction_ja.txt
+    ↓
+LLM generates response in selected language
+```
+
+### Key Implementation Details / 重要な実装詳細
+
+**1. Prompt Files (NOT Hardcoded) / プロンプトファイル（ハードコーディング禁止）**
+
+**❌ WRONG / 間違い**:
+```python
+# ハードコーディング - 絶対禁止！
+if language == "en":
+    system_prompt += "You must respond in English only..."
+```
+
+**✅ CORRECT / 正しい**:
+```python
+# ファイルから読み込み - セキュリティとメンテナンス性のため
+language_instruction_file = PROMPTS_DIR / f"language_instruction_{language}.txt"
+if language_instruction_file.exists():
+    with open(language_instruction_file, 'r', encoding='utf-8') as f:
+        language_instruction = f.read()
+    system_prompt += f"\n\n{language_instruction}\n"
+```
+
+**Why / 理由**:
+- Prompts are secret information / プロンプトは秘密情報
+- `prompts/` directory is gitignored / `prompts/`ディレクトリはgitignore
+- Deployed via rsync, not git / rsyncでデプロイ、gitではない
+- Easy to update without code changes / コード変更なしで更新可能
+
+**2. Database Schema / データベーススキーマ**
+
+```sql
+-- PostgreSQL sessions table
+ALTER TABLE sessions
+ADD COLUMN IF NOT EXISTS language VARCHAR(10) DEFAULT 'ja';
+```
+
+**Note / 注意**:
+- Default is 'ja' (Japanese) / デフォルトは 'ja'（日本語）
+- Fallback logic handles missing column gracefully / 列がない場合もフォールバックロジックで対応
+- Migration requires superuser permissions / マイグレーションにはスーパーユーザー権限が必要
+
+**3. Session Management / セッション管理**
+
+```python
+# Get language / 言語取得
+language = session_manager.get_language(user_id)  # Returns 'ja' or 'en'
+
+# Toggle language / 言語切り替え
+new_language = session_manager.toggle_language(user_id)  # JA ↔ EN
+
+# Save with language / 言語付きで保存
+pg_manager.save_session(
+    user_id=user_id,
+    selected_character=character,
+    last_message_at=datetime.now(),
+    language=new_language
+)
+```
+
+**4. Bilingual Confirmation Messages / バイリンガル確認メッセージ**
+
+```python
+# Show both languages in confirmation
+if new_language == 'en':
+    reply_message = (
+        f"✨ You selected {character_name}! Ask me anything!\n"
+        f"✨ {character_name}を選択したよ！何でも聞いてね！"
+    )
+else:
+    reply_message = (
+        f"✨ {character_name}を選択したよ！何でも聞いてね！\n"
+        f"✨ You selected {character_name}! Ask me anything!"
+    )
+```
+
+**Why both languages / なぜ両言語**:
+- User knows the system is bilingual / システムがバイリンガルであることをユーザーに知らせる
+- Clear feedback on language switching / 言語切り替えの明確なフィードバック
+- Educational for Japanese users learning English / 英語学習中の日本人ユーザーに教育的
+
+### Character Names in English Mode / 英語モードでのキャラクター名
+
+**English Mode / 英語モード**:
+- 牡丹 → **Botan**
+- Kasho → **Kasho** (no change / 変更なし)
+- ユリ → **Yuri**
+
+**Background / 背景**:
+All three sisters spent time in LA, so speaking English is natural for them. This is reflected in the system prompt:
+
+```
+You are a bilingual character who spent time in LA.
+Speaking English is natural for you.
+```
+
+### Files Modified / 変更ファイル
+
+**Core Implementation / コア実装**:
+- `src/line_bot_vps/postgresql_manager.py` - Add language parameter / 言語パラメータ追加
+- `src/line_bot_vps/session_manager_postgresql.py` - Language methods / 言語メソッド
+- `src/line_bot_vps/cloud_llm_provider.py` - Language-aware prompts / 言語対応プロンプト
+- `src/line_bot_vps/webhook_server_vps.py` - Toggle logic / 切り替えロジック
+
+**Prompt Files (gitignored) / プロンプトファイル（gitignore）**:
+- `prompts/language_instruction_en.txt` - English instructions / 英語指示
+- `prompts/language_instruction_ja.txt` - Japanese instructions / 日本語指示
+
+**Migration Script / マイグレーションスクリプト**:
+- `scripts/migrate_add_language_column.sh` - PostgreSQL migration / PostgreSQLマイグレーション
+
+### Important Rules / 重要ルール
+
+**1. NEVER Hardcode Prompts / プロンプトを絶対にハードコーディングしない**
+
+**Why / 理由**:
+- Security / セキュリティ: Prompts reveal system design / プロンプトはシステム設計を露出させる
+- Maintainability / メンテナンス性: Easy to update without code changes / コード変更なしで更新可能
+- Privacy / プライバシー: Character control logic stays secret / キャラクター制御ロジックを秘密に保つ
+
+**2. Use Language-Specific Prompt Files / 言語別プロンプトファイルを使用**
+
+```
+prompts/
+├── language_instruction_en.txt  ← English language rules
+├── language_instruction_ja.txt  ← Japanese language rules
+├── botan_base_prompt.txt        ← Character-specific
+├── kasho_base_prompt.txt
+└── yuri_base_prompt.txt
+```
+
+**3. Handle Missing Language Column Gracefully / 言語列がない場合も適切に対応**
+
+```python
+def get_language(self, user_id: str) -> str:
+    """Get language preference with fallback"""
+    session = self.pg_manager.get_session(user_id)
+    if session and 'language' in session:
+        return session.get('language', 'ja')
+    return 'ja'  # Default fallback / デフォルトフォールバック
+```
+
+**4. Update ALL User-Facing Messages / 全てのユーザー向けメッセージを更新**
+
+**Affected Components / 影響を受けるコンポーネント**:
+- ✅ Character selection confirmation / キャラクター選択確認
+- ✅ Feedback request message / フィードバック依頼メッセージ
+- ✅ Terms of Service display / 利用規約表示
+- ✅ Help menu display / ヘルプメニュー表示
+- ⚠️ Flex messages (TODO: Create bilingual versions) / Flexメッセージ（TODO: バイリンガル版作成）
+
+### Testing Checklist / テストチェックリスト
+
+Before declaring bilingual mode complete, test:
+
+**Basic Functionality / 基本機能**:
+- [ ] Tap Botan → Language toggles / 牡丹タップ → 言語切り替え
+- [ ] Tap Kasho → Language toggles / Kashoタップ → 言語切り替え
+- [ ] Tap Yuri → Language toggles / ユリタップ → 言語切り替え
+- [ ] Confirmation message shows both languages / 確認メッセージが両言語表示
+- [ ] Subsequent responses use correct language / 以降の応答が正しい言語
+
+**Edge Cases / エッジケース**:
+- [ ] Language persists across sessions / 言語設定がセッションをまたいで保持
+- [ ] Language works with conversation history / 会話履歴と言語設定が連動
+- [ ] Language works with RAG search / RAG検索と言語設定が連動
+- [ ] Language works with trending topics / トレンドトピックと言語設定が連動
+
+**User Experience / ユーザー体験**:
+- [ ] Natural code-switching (LA returnee style) / 自然なコードスイッチング（LA帰りスタイル）
+- [ ] No Chinese characters leak through / 中国語文字が漏れない
+- [ ] Proper nouns preserved in both languages / 固有名詞が両言語で保持
+
+### Deployment Process / デプロイプロセス
+
+**1. Sync Files / ファイル同期**:
+```bash
+# Python code
+rsync -avz src/line_bot_vps/ xserver-vps:/root/AI-Vtuber-Project/src/line_bot_vps/
+
+# Prompt files (gitignored)
+rsync -avz prompts/ xserver-vps:/root/AI-Vtuber-Project/prompts/
+
+# Migration script
+rsync -avz scripts/migrate_add_language_column.sh xserver-vps:/root/AI-Vtuber-Project/scripts/
+```
+
+**2. Run Migration (requires superuser) / マイグレーション実行（スーパーユーザー権限必要）**:
+```bash
+ssh xserver-vps
+sudo -u postgres psql -d linebotsisters -c "
+  ALTER TABLE sessions ADD COLUMN IF NOT EXISTS language VARCHAR(10) DEFAULT 'ja';
+"
+```
+
+**3. Restart LINE Bot / LINE Bot再起動**:
+```bash
+ssh xserver-vps 'pkill -f "uvicorn.*webhook_server_vps"'
+ssh xserver-vps 'cd /root/AI-Vtuber-Project && source venv/bin/activate && nohup python -m uvicorn src.line_bot_vps.webhook_server_vps:app --host 0.0.0.0 --port 8000 > /tmp/line_bot_vps.log 2>&1 &'
+```
+
+### Troubleshooting / トラブルシューティング
+
+**Problem / 問題**: Language not switching / 言語が切り替わらない
+
+**Solution / 解決策**:
+1. Check if language column exists / 言語列が存在するか確認
+   ```sql
+   \d sessions
+   ```
+2. Check session_manager logs / session_managerのログ確認
+   ```bash
+   grep "language" /tmp/line_bot_vps.log
+   ```
+3. Verify language prompt files exist / 言語プロンプトファイルが存在するか確認
+   ```bash
+   ls prompts/language_instruction_*.txt
+   ```
+
+**Problem / 問題**: Responses still in wrong language / 応答が間違った言語のまま
+
+**Solution / 解決策**:
+1. Check if language is being passed to LLM / 言語がLLMに渡されているか確認
+   ```python
+   logger.info(f"🌐 ユーザー言語設定: {language}")
+   ```
+2. Check if correct prompt file is loaded / 正しいプロンプトファイルが読み込まれているか確認
+3. Restart LINE Bot to reload prompt files / LINE Botを再起動してプロンプトファイルを再読み込み
+
+**Problem / 問題**: PostgreSQL permission denied / PostgreSQL権限拒否
+
+**Solution / 解決策**:
+- Migration requires superuser permissions / マイグレーションにはスーパーユーザー権限が必要
+- Contact VPS administrator / VPS管理者に連絡
+- Or: Use fallback logic (code defaults to 'ja') / または: フォールバックロジックを使用（コードは'ja'にデフォルト）
+
+### Future Enhancements / 将来の拡張
+
+**Planned / 計画中**:
+- [ ] Bilingual Flex messages (Terms, Help) / バイリンガルFlexメッセージ（利用規約、ヘルプ）
+- [ ] Language-specific character personalities / 言語別キャラクターパーソナリティ
+- [ ] Mixed language mode (natural code-switching) / 混合言語モード（自然なコードスイッチング）
+- [ ] Language learning assistance / 語学学習支援
+
+**Possible / 可能性**:
+- [ ] More languages (Chinese, Korean, Spanish) / より多くの言語（中国語、韓国語、スペイン語）
+- [ ] Voice input/output with language detection / 言語検出付き音声入出力
+- [ ] Language-specific trending topics / 言語別トレンドトピック
+
+---
+
+## 🌍 英語メイン会話モード（2025-11-21追加）
+
+> 面接準備のため、クロコとの会話を英語メイン+日本語補足の形式に変更しました。
+
+### 基本方針
+
+**English**:
+To prepare for interviews at xAI, Anthropic, OpenAI, and Mistral, all conversations with Kuroko (Claude Code) will be conducted primarily in English with Japanese supplements for important points.
+
+**日本語補足**:
+xAI、Anthropic、OpenAI、Mistralの面接準備のため、クロコとの会話を英語メイン+日本語補足の形式で行います。
+
+### 会話形式（方式3: 英語メイン + 日本語補足）
+
+**Format**:
+```
+**English**:
+Main content in English with natural, professional expressions.
+
+**日本語補足**:
+重要なポイントや難しい部分の日本語補足
+```
+
+### なぜこの形式か
+
+**English**:
+This bilingual format provides several benefits:
+
+1. **Natural English Immersion**: Get comfortable reading and thinking in English
+2. **Interview Preparation**: Learn professional expressions and technical terminology
+3. **Confidence Building**: Gradually improve English fluency through daily practice
+4. **Safety Net**: Japanese supplements ensure no important information is missed
+
+**日本語補足**:
+1. 自然な英語に慣れる
+2. 面接で使える表現・技術用語を学ぶ
+3. 毎日の練習で英語力向上
+4. 重要情報を見逃さない（日本語補足）
+
+### ユーザー（越川さん）の対応
+
+**English**:
+The user (Koshikawa-san) will also practice English as much as possible during conversations.
+
+- ✅ Use English whenever comfortable
+- ✅ Mix Japanese and English freely
+- ✅ Don't worry about mistakes - this is practice!
+
+**日本語補足**:
+ユーザー（越川さん）も会話中にできる限り英語を使います。
+- 快適なら英語を使う
+- 日本語と英語を自由に混ぜてOK
+- 間違いを気にしない - 練習です！
+
+### いつから開始
+
+**開始日**: 2025-11-21
+
+**English**:
+Starting from this date, all conversations will follow the bilingual format (English main + Japanese supplements) unless otherwise specified.
+
+**日本語補足**:
+この日から、特に指定がない限り、全ての会話は英語メイン+日本語補足の形式で行います。
+
+### 例外
+
+**English**:
+The following situations may revert to Japanese-only:
+
+- Emergency troubleshooting
+- Complex technical debugging
+- When user explicitly requests Japanese-only
+
+**日本語補足**:
+以下の場合は日本語のみに戻すことがあります:
+- 緊急のトラブルシューティング
+- 複雑な技術デバッグ
+- ユーザーが明示的に日本語のみを要求した場合
+
+### 期待される効果
+
+**English**:
+Through this bilingual practice, we expect:
+
+1. **Interview Readiness**: Comfortable discussing Botan Project in English
+2. **Technical Vocabulary**: Master AI/LLM terminology in English
+3. **Natural Expressions**: Learn conversational patterns used by native speakers
+4. **Confidence**: Reduce anxiety about English interviews
+
+**日本語補足**:
+このバイリンガル練習を通じて、以下の効果を期待:
+1. 面接準備: 牡丹プロジェクトを英語で説明できる
+2. 技術用語: AI/LLM関連の英語用語をマスター
+3. 自然な表現: ネイティブが使う会話パターンを学ぶ
+4. 自信: 英語面接への不安を軽減
+
+---
+
+**最終更新**: 2025-11-21 (LINE Bot バイリンガルモード実装 & 英語メイン会話モードを追加)

@@ -55,8 +55,8 @@ class RichMenuManager:
     ) -> Optional[str]:
         """3姉妹キャラクター選択用のリッチメニューを作成（2段×3列構成）
 
-        上段: キャラクター選択（牡丹、Kasho、ユリ）
-        下段: 機能メニュー（規約、ヘルプ、統計）
+        上段: 機能メニュー（自動、FB、規約）
+        下段: キャラクター選択（Kasho、牡丹、ユリ）
 
         Args:
             menu_image_path: メニュー画像のパス
@@ -74,47 +74,47 @@ class RichMenuManager:
         row_height = menu_height // 2  # 843px
 
         areas = [
-            # 上段: キャラクター選択（3エリア）
+            # 上段: 機能メニュー（自動、FB、規約）
             RichMenuArea(
                 bounds_x=0,
                 bounds_y=0,
                 bounds_width=area_width,
                 bounds_height=row_height,
                 action_type="postback",
-                action_data="character=botan"
+                action_data="action=auto"
             ),
             RichMenuArea(
                 bounds_x=area_width,
                 bounds_y=0,
+                bounds_width=area_width,
+                bounds_height=row_height,
+                action_type="postback",
+                action_data="action=feedback"
+            ),
+            RichMenuArea(
+                bounds_x=area_width * 2,
+                bounds_y=0,
+                bounds_width=area_width,
+                bounds_height=row_height,
+                action_type="postback",
+                action_data="action=terms"
+            ),
+            # 下段: キャラクター選択（Kasho、牡丹、ユリ）
+            RichMenuArea(
+                bounds_x=0,
+                bounds_y=row_height,
                 bounds_width=area_width,
                 bounds_height=row_height,
                 action_type="postback",
                 action_data="character=kasho"
             ),
             RichMenuArea(
-                bounds_x=area_width * 2,
-                bounds_y=0,
-                bounds_width=area_width,
-                bounds_height=row_height,
-                action_type="postback",
-                action_data="character=yuri"
-            ),
-            # 下段: 機能メニュー（3エリア）
-            RichMenuArea(
-                bounds_x=0,
-                bounds_y=row_height,
-                bounds_width=area_width,
-                bounds_height=row_height,
-                action_type="postback",
-                action_data="action=terms"
-            ),
-            RichMenuArea(
                 bounds_x=area_width,
                 bounds_y=row_height,
                 bounds_width=area_width,
                 bounds_height=row_height,
                 action_type="postback",
-                action_data="action=help"
+                action_data="character=botan"
             ),
             RichMenuArea(
                 bounds_x=area_width * 2,
@@ -122,7 +122,7 @@ class RichMenuManager:
                 bounds_width=area_width,
                 bounds_height=row_height,
                 action_type="postback",
-                action_data="action=stats"
+                action_data="character=yuri"
             ),
         ]
 

@@ -19,6 +19,8 @@ from datetime import datetime
 import os
 import json
 import time
+import asyncio
+# Note: MessageBuffer uses dict directly, not defaultdict
 from dotenv import load_dotenv
 
 # .envファイルを読み込み
@@ -86,6 +88,145 @@ root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
 root_logger.addHandler(file_handler)
 root_logger.addHandler(console_handler)
+
+
+# ========================================
+# メッセージバッファリング（連続メッセージ結合）
+# ========================================
+class MessageBuffer:
+    """
+    短時間に連続送信されたメッセージを結合する。
+
+    LINEユーザーは「今日」「バイト」「疲れた」のように
+    複数の短いメッセージを連続で送ることが多い。
+    これらを1つのメッセージとして処理することで、
+    より自然な応答が可能になる。
+    """
+
+    def __init__(self, buffer_timeout: float = 1.5):
+        """
+        Args:
+            buffer_timeout: メッセージを待つ時間（秒）
+        """
+        self.buffer_timeout = buffer_timeout
+        self.buffers = {}  # user_id -> {"messages": [], "last_time": float, "task": asyncio.Task}
+        self.callbacks = {}  # user_id -> callback function
+        self._lock = asyncio.Lock()
+
+    async def add_message(
+        self,
+        user_id: str,
+        message: str,
+        reply_token: str,
+        callback
+    ) -> bool:
+        """
+        メッセージをバッファに追加。
+
+        Args:
+            user_id: ユーザーID
+            message: メッセージ内容
+            reply_token: LINE返信トークン（最新のものを使用）
+            callback: バッファフラッシュ時に呼ばれるコールバック
+
+        Returns:
+            True: バッファに追加された（まだ処理しない）
+            False: 即座に処理すべき（特殊コマンドなど）
+        """
+        # 特殊コマンドは即座に処理（バッファリングしない）
+        special_commands = ["ヘルプ", "help", "利用規約", "メニュー", "キャラ変更", "統計"]
+        if any(cmd in message.lower() for cmd in special_commands):
+            return False
+
+        async with self._lock:
+            now = time.time()
+
+            if user_id in self.buffers:
+                # 既存バッファに追加
+                buf = self.buffers[user_id]
+                buf["messages"].append(message)
+                buf["last_time"] = now
+                buf["reply_token"] = reply_token  # 最新のトークンを保持
+
+                # 既存のタイマータスクをキャンセル
+                if buf.get("task") and not buf["task"].done():
+                    buf["task"].cancel()
+
+                # 新しいタイマーを開始
+                buf["task"] = asyncio.create_task(
+                    self._flush_after_timeout(user_id)
+                )
+
+                logger.info(f"📝 バッファ追加: {user_id[:8]}... ({len(buf['messages'])}件)")
+                return True
+            else:
+                # 新規バッファ作成
+                self.buffers[user_id] = {
+                    "messages": [message],
+                    "last_time": now,
+                    "reply_token": reply_token,
+                    "task": None
+                }
+                self.callbacks[user_id] = callback
+
+                # タイマー開始
+                self.buffers[user_id]["task"] = asyncio.create_task(
+                    self._flush_after_timeout(user_id)
+                )
+
+                logger.info(f"📝 バッファ開始: {user_id[:8]}...")
+                return True
+
+    async def _flush_after_timeout(self, user_id: str):
+        """タイムアウト後にバッファをフラッシュ"""
+        await asyncio.sleep(self.buffer_timeout)
+        await self.flush(user_id)
+
+    async def flush(self, user_id: str):
+        """バッファをフラッシュして結合メッセージを処理"""
+        async with self._lock:
+            if user_id not in self.buffers:
+                return
+
+            buf = self.buffers.pop(user_id)
+            callback = self.callbacks.pop(user_id, None)
+
+        if not buf["messages"]:
+            return
+
+        # メッセージを結合（スペースで区切る）
+        combined_message = " ".join(buf["messages"])
+
+        logger.info(f"📤 バッファフラッシュ: {user_id[:8]}... -> \"{combined_message[:50]}...\"")
+
+        # コールバック実行
+        if callback:
+            try:
+                await callback(
+                    user_id=user_id,
+                    combined_message=combined_message,
+                    reply_token=buf["reply_token"],
+                    message_count=len(buf["messages"])
+                )
+            except Exception as e:
+                logger.error(f"❌ バッファコールバックエラー: {e}")
+
+    def get_buffer_status(self, user_id: str) -> dict:
+        """バッファの状態を取得（デバッグ用）"""
+        if user_id in self.buffers:
+            buf = self.buffers[user_id]
+            return {
+                "message_count": len(buf["messages"]),
+                "messages": buf["messages"],
+                "waiting_seconds": time.time() - buf["last_time"]
+            }
+        return {"message_count": 0, "messages": [], "waiting_seconds": 0}
+
+
+# グローバルなメッセージバッファ（1.5秒待機）
+message_buffer = MessageBuffer(buffer_timeout=1.5)
+logger.info("✅ MessageBuffer初期化完了（1.5秒バッファリング）")
+
 
 # FastAPIアプリ作成
 app = FastAPI(
@@ -207,25 +348,25 @@ async def shutdown_event():
 # ========================================
 
 # キャラクター設定
-NGROK_URL = os.getenv("NGROK_URL", "https://dorothy-unmodulative-mariann.ngrok-free.dev")
+ICON_BASE_URL = "https://www.three-sisters.ai/images"
 CHARACTERS = {
     "kasho": {
         "name": "Kasho",
         "display_name": "Kasho（花相）",
         "age": 19,
-        "icon_url": f"{NGROK_URL}/assets/kasho.png"
+        "icon_url": f"{ICON_BASE_URL}/kasho_icon.jpg"
     },
     "botan": {
         "name": "牡丹",
         "display_name": "牡丹（Botan）",
         "age": 17,
-        "icon_url": f"{NGROK_URL}/assets/botan.png"
+        "icon_url": f"{ICON_BASE_URL}/botan_icon.jpg"
     },
     "yuri": {
         "name": "ユリ",
         "display_name": "ユリ（Yuri）",
         "age": 15,
-        "icon_url": f"{NGROK_URL}/assets/yuri.png"
+        "icon_url": f"{ICON_BASE_URL}/yuri_icon.jpg"
     }
 }
 
@@ -478,6 +619,149 @@ async def get_learning_logs(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ========================================
+# Push Message API（バッファリング用）
+# ========================================
+def send_push_message(user_id: str, text: str, character: str) -> bool:
+    """
+    LINE Push Message API を使用してメッセージを送信。
+
+    バッファリングされたメッセージはreply_tokenが期限切れになるため、
+    Push APIを使用する。
+
+    Args:
+        user_id: LINE ユーザーID
+        text: 送信するテキスト
+        character: キャラクター名（アイコン設定用）
+
+    Returns:
+        成功したらTrue
+    """
+    import requests
+
+    push_url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+    }
+    payload = {
+        "to": user_id,
+        "messages": [
+            {
+                "type": "text",
+                "text": text,
+                "sender": {
+                    "name": CHARACTERS[character]["display_name"],
+                    "iconUrl": CHARACTERS[character]["icon_url"]
+                }
+            }
+        ]
+    }
+
+    try:
+        response = requests.post(push_url, headers=headers, json=payload)
+        if response.status_code == 200:
+            logger.info(f"✅ Push送信成功: {character} -> {text[:30]}...")
+            return True
+        else:
+            logger.error(f"❌ Push送信エラー: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Push API呼び出しエラー: {e}")
+        return False
+
+
+async def process_combined_message(
+    user_id: str,
+    combined_message: str,
+    reply_token: str,
+    message_count: int
+):
+    """
+    バッファから結合されたメッセージを処理するコールバック。
+
+    Args:
+        user_id: LINE ユーザーID
+        combined_message: 結合されたメッセージ
+        reply_token: LINE返信トークン（期限切れの可能性あり）
+        message_count: 結合されたメッセージ数
+    """
+    logger.info(f"🔄 結合メッセージ処理開始: {user_id[:8]}... ({message_count}件結合)")
+
+    try:
+        # モード取得（auto / botan / kasho / yuri）
+        selected_mode = pg_manager.get_user_mode(user_id)
+
+        if selected_mode == "auto":
+            # 自動モード: 三姉妹で親和性スコアリング
+            selection_result = auto_character_selector.select_best_character(combined_message)
+            character = selection_result["character"]
+            scores = selection_result["scores"]
+            logger.info(f"🎯 自動選択: {character} (スコア: {scores})")
+        else:
+            # 固定モード
+            character = selected_mode
+            logger.info(f"📌 固定モード: {character}")
+
+        # 会話履歴を取得（過去30件）
+        conversation_history = session_manager.get_conversation_history(
+            user_id=user_id,
+            character=character,
+            limit=30
+        )
+        if conversation_history:
+            logger.info(f"📚 会話履歴取得: {len(conversation_history)}件")
+
+        # 応答生成
+        bot_response, response_time = await generate_response(
+            character=character,
+            user_message=combined_message,
+            user_id=user_id,
+            conversation_history=conversation_history
+        )
+
+        # 会話履歴を保存
+        try:
+            success = session_manager.save_conversation(
+                user_id=user_id,
+                character=character,
+                user_message=combined_message,
+                bot_response=bot_response
+            )
+            if success:
+                logger.debug(f"💾 会話履歴保存完了")
+            else:
+                logger.error(f"❌ 会話履歴保存失敗")
+        except Exception as e:
+            logger.error(f"❌ 会話履歴保存エラー: {e}")
+
+        # 学習ログ保存
+        try:
+            learning_log_system.save_log(
+                character=character,
+                user_id=user_id,
+                user_message=combined_message,
+                bot_response=bot_response,
+                response_time=response_time
+            )
+        except Exception as e:
+            logger.error(f"❌ 学習ログ保存エラー: {e}")
+
+        # 最終メッセージ時刻を更新
+        session_manager.update_last_message_time(user_id, character)
+
+        # Push APIで返信（reply_tokenは期限切れの可能性があるため）
+        send_push_message(user_id, bot_response, character)
+
+    except Exception as e:
+        logger.error(f"❌ 結合メッセージ処理エラー: {e}")
+        # エラー時もユーザーに通知
+        try:
+            send_push_message(user_id, "ごめんね、ちょっとエラーが起きちゃった...もう一度話しかけてくれる？", "botan")
+        except Exception:
+            pass
+
+
 @app.post("/webhook")
 async def webhook(request: Request):
     """
@@ -562,11 +846,11 @@ async def webhook(request: Request):
                     # 言語を切り替え（JP ↔ EN）
                     new_language = session_manager.toggle_language(user_id)
 
-                    # バイリンガル確認メッセージ
+                    # バイリンガル確認メッセージ（言語コード表示）
                     if new_language == 'en':
-                        reply_message = f"✨ You selected {CHARACTERS[character]['display_name']}! Ask me anything!\n✨ {CHARACTERS[character]['display_name']}を選択したよ！何でも聞いてね！"
+                        reply_message = f"✨ You selected {CHARACTERS[character]['display_name']}! (Lang: EN)\n✨ {CHARACTERS[character]['display_name']}を選択したよ！（Lang: EN）"
                     else:
-                        reply_message = f"✨ {CHARACTERS[character]['display_name']}を選択したよ！何でも聞いてね！\n✨ You selected {CHARACTERS[character]['display_name']}! Ask me anything!"
+                        reply_message = f"✨ {CHARACTERS[character]['display_name']}を選択したよ！（Lang: JA）\n✨ You selected {CHARACTERS[character]['display_name']}! (Lang: JA)"
 
                     try:
                         import requests
@@ -595,28 +879,88 @@ async def webhook(request: Request):
                     except Exception as e:
                         logger.error(f"❌ LINE API呼び出しエラー: {e}")
 
-            # モード設定処理（自動/固定）
+            # モード設定処理（自動/固定）- スマート切り替えロジック
             elif postback_data.startswith("action=set_mode&mode="):
                 mode = postback_data.split("mode=")[1]
                 if mode in ["auto", "botan", "kasho", "yuri"]:
-                    pg_manager.set_user_mode(user_id, mode)
+                    # 現在のモードを取得
+                    session = pg_manager.get_session(user_id)
+                    current_mode = session.get('selected_mode') if session else None
 
-                    # モード別確認メッセージ
-                    if mode == "auto":
-                        reply_message = (
-                            "✅ 自動モードに設定しました！\n\n"
-                            "これからは、話題に合わせて三姉妹が自動的に応答します。\n\n"
-                            "🌸 牡丹: VTuber、エンタメ\n"
-                            "🎵 Kasho: 音楽、オーディオ\n"
-                            "📚 ユリ: サブカル、アニメ、ライトノベル\n\n"
-                            "※ 特定のキャラクターと話したい場合は、下のボタンから選んでね！"
-                        )
-                    elif mode == "botan":
-                        reply_message = "✅ 牡丹に固定しました！\nこれからは牡丹があなたの質問に答えるよ！\n\n話したいことある？"
-                    elif mode == "kasho":
-                        reply_message = "✅ Kashoに固定しました！\nこれからはKashoがあなたの質問に答えますね。\n\n何でも聞いてください。"
-                    elif mode == "yuri":
-                        reply_message = "✅ ユリに固定しました！\nこれからはユリがあなたの質問に答えるね。\n\n何か知りたいことある？"
+                    if mode == current_mode:
+                        # 同じモード → 言語を切り替え（モードは変更しない）
+                        new_language = session_manager.toggle_language(user_id)
+
+                        # 言語切り替え確認メッセージ（バイリンガル）
+                        if new_language == 'en':
+                            reply_message = (
+                                "🌐 Language switched to English! (Lang: EN)\n"
+                                "🌐 言語を英語に切り替えました！（Lang: EN）"
+                            )
+                        else:
+                            reply_message = (
+                                "🌐 言語を日本語に切り替えました！（Lang: JA）\n"
+                                "🌐 Language switched to Japanese! (Lang: JA)"
+                            )
+                    else:
+                        # 異なるモード → モードを変更（言語は変更しない）
+                        pg_manager.set_user_mode(user_id, mode)
+                        current_language = session_manager.get_language(user_id)
+                        lang_code = current_language.upper()
+
+                        # モード別確認メッセージ（バイリンガル + 言語コード表示）
+                        if mode == "auto":
+                            if current_language == 'en':
+                                reply_message = (
+                                    f"✅ Set to Auto mode! (Lang: {lang_code})\n"
+                                    f"✅ 自動モードに設定しました！（Lang: {lang_code}）\n\n"
+                                    f"The three sisters will respond based on the topic:\n"
+                                    f"🌸 Botan: VTuber, Entertainment\n"
+                                    f"🎵 Kasho: Music, Audio\n"
+                                    f"📚 Yuri: Subculture, Anime, Light Novels"
+                                )
+                            else:
+                                reply_message = (
+                                    f"✅ 自動モードに設定しました！（Lang: {lang_code}）\n"
+                                    f"✅ Set to Auto mode! (Lang: {lang_code})\n\n"
+                                    f"これからは、話題に合わせて三姉妹が自動的に応答します：\n"
+                                    f"🌸 牡丹: VTuber、エンタメ\n"
+                                    f"🎵 Kasho: 音楽、オーディオ\n"
+                                    f"📚 ユリ: サブカル、アニメ、ライトノベル"
+                                )
+                        elif mode == "botan":
+                            if current_language == 'en':
+                                reply_message = (
+                                    f"✨ You selected 牡丹 (Botan)! (Lang: {lang_code})\n"
+                                    f"✨ 牡丹に固定しました！（Lang: {lang_code}）"
+                                )
+                            else:
+                                reply_message = (
+                                    f"✨ 牡丹に固定しました！（Lang: {lang_code}）\n"
+                                    f"✨ You selected 牡丹 (Botan)! (Lang: {lang_code})"
+                                )
+                        elif mode == "kasho":
+                            if current_language == 'en':
+                                reply_message = (
+                                    f"✨ You selected Kasho (花相)! (Lang: {lang_code})\n"
+                                    f"✨ Kashoに固定しました！（Lang: {lang_code}）"
+                                )
+                            else:
+                                reply_message = (
+                                    f"✨ Kashoに固定しました！（Lang: {lang_code}）\n"
+                                    f"✨ You selected Kasho (花相)! (Lang: {lang_code})"
+                                )
+                        elif mode == "yuri":
+                            if current_language == 'en':
+                                reply_message = (
+                                    f"✨ You selected ユリ (Yuri)! (Lang: {lang_code})\n"
+                                    f"✨ ユリに固定しました！（Lang: {lang_code}）"
+                                )
+                            else:
+                                reply_message = (
+                                    f"✨ ユリに固定しました！（Lang: {lang_code}）\n"
+                                    f"✨ You selected ユリ (Yuri)! (Lang: {lang_code})"
+                                )
 
                     try:
                         import requests
@@ -640,6 +984,55 @@ async def webhook(request: Request):
                             logger.error(f"❌ 返信エラー: {response.status_code}")
                     except Exception as e:
                         logger.error(f"❌ LINE API呼び出しエラー: {e}")
+
+            # 自動モード設定（リッチメニューの「自動」ボタン）
+            elif postback_data == "action=auto":
+                # 自動モードに設定
+                pg_manager.set_user_mode(user_id, "auto")
+                current_language = session_manager.get_language(user_id)
+                lang_code = current_language.upper()
+
+                if current_language == 'en':
+                    reply_message = (
+                        f"✅ Set to Auto mode! (Lang: {lang_code})\n"
+                        f"✅ 自動モードに設定しました！（Lang: {lang_code}）\n\n"
+                        f"The three sisters will respond based on the topic:\n"
+                        f"🌸 Botan: VTuber, Entertainment\n"
+                        f"🎵 Kasho: Music, Audio\n"
+                        f"📚 Yuri: Subculture, Anime, Light Novels"
+                    )
+                else:
+                    reply_message = (
+                        f"✅ 自動モードに設定しました！（Lang: {lang_code}）\n"
+                        f"✅ Set to Auto mode! (Lang: {lang_code})\n\n"
+                        f"これからは、話題に合わせて三姉妹が自動的に応答します：\n"
+                        f"🌸 牡丹: VTuber、エンタメ\n"
+                        f"🎵 Kasho: 音楽、オーディオ\n"
+                        f"📚 ユリ: サブカル、アニメ、ライトノベル"
+                    )
+
+                try:
+                    import requests
+                    reply_url = "https://api.line.me/v2/bot/message/reply"
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                    }
+                    payload = {
+                        "replyToken": reply_token,
+                        "messages": [{
+                            "type": "text",
+                            "text": reply_message
+                        }]
+                    }
+                    response = requests.post(reply_url, headers=headers, json=payload)
+
+                    if response.status_code == 200:
+                        logger.info(f"✅ 自動モード設定成功")
+                    else:
+                        logger.error(f"❌ 返信エラー: {response.status_code}")
+                except Exception as e:
+                    logger.error(f"❌ LINE API呼び出しエラー: {e}")
 
             # フィードバック受付
             elif postback_data == "action=feedback":
@@ -814,26 +1207,54 @@ async def webhook(request: Request):
                 # フィードバック待ち状態の確認
                 feedback_state = pg_manager.get_feedback_state(user_id)
 
-                if feedback_state == "waiting":
-                    # フィードバック処理
-                    if user_message.lower() in ["キャンセル", "cancel"]:
-                        # キャンセル
+                # 「キャンセル」のみの入力は無視（フィードバック待ちでなくても反応しない）
+                if user_message.lower() in ["キャンセル", "cancel"]:
+                    if feedback_state == "waiting":
+                        # フィードバック待ち中のキャンセル
                         pg_manager.set_feedback_state(user_id, "none")
                         bot_response = "フィードバックをキャンセルしました。"
+                        # LINE返信
+                        try:
+                            import requests
+                            reply_url = "https://api.line.me/v2/bot/message/reply"
+                            headers = {
+                                "Content-Type": "application/json",
+                                "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                            }
+                            payload = {
+                                "replyToken": reply_token,
+                                "messages": [{
+                                    "type": "text",
+                                    "text": bot_response
+                                }]
+                            }
+                            response = requests.post(reply_url, headers=headers, json=payload)
+                            if response.status_code == 200:
+                                logger.info(f"✅ フィードバックキャンセル完了")
+                            else:
+                                logger.error(f"❌ 返信エラー: {response.status_code}")
+                        except Exception as e:
+                            logger.error(f"❌ LINE API呼び出しエラー: {e}")
                     else:
-                        # フィードバック保存
-                        pg_manager.save_feedback(user_id, user_message)
-                        pg_manager.set_feedback_state(user_id, "none")
+                        # フィードバック待ちでない場合は無視
+                        logger.info(f"🔇 キャンセル入力を無視（フィードバック待ちでない）")
+                    continue  # 次のイベントへ
 
-                        # Messaging API で開発者に通知
-                        feedback_notifier.send_feedback_notification(user_id, user_message)
+                if feedback_state == "waiting":
+                    # フィードバック処理（キャンセル以外）
+                    # フィードバック保存
+                    pg_manager.save_feedback(user_id, user_message)
+                    pg_manager.set_feedback_state(user_id, "none")
 
-                        bot_response = (
-                            "✅ フィードバックを受け付けました！\n"
-                            "ありがとうございます！\n\n"
-                            "開発者に通知しました。\n"
-                            "今後の改善に活かさせていただきます。"
-                        )
+                    # Messaging API で開発者に通知
+                    feedback_notifier.send_feedback_notification(user_id, user_message)
+
+                    bot_response = (
+                        "✅ フィードバックを受け付けました！\n"
+                        "ありがとうございます！\n\n"
+                        "開発者に通知しました。\n"
+                        "今後の改善に活かさせていただきます。"
+                    )
 
                     # LINE返信
                     try:
@@ -861,123 +1282,33 @@ async def webhook(request: Request):
 
                     continue  # 次のイベントへ
 
-                # 通常メッセージ処理
-                # モード取得（auto / botan / kasho / yuri）
-                selected_mode = pg_manager.get_user_mode(user_id)
+                # 通常メッセージ処理（バッファリング対応）
+                # 短時間の連続メッセージを結合して処理
+                logger.info(f"📩 メッセージ受信: {user_message[:30]}...")
 
-                if selected_mode == "auto":
-                    # 自動モード: 三姉妹で親和性スコアリング
-                    selection_result = auto_character_selector.select_best_character(user_message)
-                    character = selection_result["character"]
-                    scores = selection_result["scores"]
-
-                    logger.info(f"🎯 自動選択: {character} (スコア: {scores})")
-                else:
-                    # 固定モード
-                    character = selected_mode
-                    logger.info(f"📌 固定モード: {character}")
-
-                logger.info(f"📩 メッセージ受信: {character} <- {user_message[:30]}...")
-
-                # 会話履歴を取得（過去30件 - 最近の会話に集中）
-                conversation_history = session_manager.get_conversation_history(
+                # バッファに追加（特殊コマンドはFalseが返る）
+                buffered = await message_buffer.add_message(
                     user_id=user_id,
-                    character=character,
-                    limit=30
-                )
-                if conversation_history:
-                    logger.info(f"📚 会話履歴取得: {len(conversation_history)}件")
-
-                # 応答生成（統合判定エンジン統合版、会話履歴を含む）
-                bot_response, response_time = await generate_response(
-                    character=character,
-                    user_message=user_message,
-                    user_id=user_id,
-                    conversation_history=conversation_history
+                    message=user_message,
+                    reply_token=reply_token,
+                    callback=process_combined_message
                 )
 
-                # 会話履歴を保存（user + assistant）
-                try:
-                    success = session_manager.save_conversation(
-                        user_id=user_id,
-                        character=character,
-                        user_message=user_message,
-                        bot_response=bot_response
-                    )
-                    if success:
-                        logger.debug(f"💾 会話履歴保存完了")
-                    else:
-                        logger.error(f"❌ 会話履歴保存失敗: save_conversation returned False")
-                except Exception as e:
-                    logger.error(f"❌ 会話履歴保存エラー: {e}")
+                if buffered:
+                    # バッファリングされた場合は即座に200を返す
+                    # process_combined_messageがバッファタイムアウト後に呼ばれる
+                    logger.info(f"⏳ バッファリング中: {user_id[:8]}...")
+                    continue  # 次のイベントへ
 
-                # 学習ログ保存（SQLite）
-                try:
-                    learning_log_system.save_log(
-                        character=character,
-                        user_id=hashlib.sha256(user_id.encode()).hexdigest()[:16],  # ハッシュ化
-                        user_message=user_message,
-                        bot_response=bot_response,
-                        phase5_user_tier="Safe",  # TODO: 実装後に実際の判定結果
-                        phase5_response_tier="Safe",
-                        memories_used=None,  # TODO: Phase D実装後
-                        response_time=response_time,
-                        metadata={
-                            "platform": "LINE_VPS",
-                            "event_type": event_type,
-                            "character": character
-                        }
-                    )
-                except Exception as e:
-                    logger.error(f"❌ 学習ログ保存エラー（SQLite）: {e}")
-
-                # 学習ログ保存（PostgreSQL）
-                try:
-                    learning_log_system.save_log(
-                        character=character,
-                        user_id=user_id,
-                        user_message=user_message,
-                        bot_response=bot_response,
-                        response_time=response_time
-                    )
-                except Exception as e:
-                    logger.error(f"❌ 学習ログ保存エラー（PostgreSQL）: {e}")
-
-                # 最終メッセージ時刻を更新（selected_characterも更新）
-                session_manager.update_last_message_time(user_id, character)
-
-                # LINE返信
-                try:
-                    import requests
-
-                    reply_url = "https://api.line.me/v2/bot/message/reply"
-                    headers = {
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
-                    }
-                    payload = {
-                        "replyToken": reply_token,
-                        "messages": [
-                            {
-                                "type": "text",
-                                "text": bot_response,
-                                "sender": {
-                                    "name": CHARACTERS[character]["display_name"],
-                                    "iconUrl": CHARACTERS[character]["icon_url"]
-                                }
-                            }
-                        ]
-                    }
-
-                    response = requests.post(reply_url, headers=headers, json=payload)
-
-                    if response.status_code == 200:
-                        logger.info(f"✅ LINE返信成功: {character} -> {bot_response[:30]}...")
-                    else:
-                        logger.error(f"❌ LINE返信エラー: {response.status_code} - {response.text}")
-
-                except Exception as e:
-                    logger.error(f"❌ LINE API呼び出しエラー: {e}")
+                # 特殊コマンドはバッファリングせず即座に処理
+                # （ただし、ほとんどの特殊コマンドは上のセクションで処理済み）
+                # ここに到達する場合は単一メッセージとして処理
+                await process_combined_message(
+                    user_id=user_id,
+                    combined_message=user_message,
+                    reply_token=reply_token,
+                    message_count=1
+                )
 
     return JSONResponse(content={"status": "ok"})
 

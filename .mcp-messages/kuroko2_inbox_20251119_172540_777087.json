@@ -1,0 +1,12 @@
+{
+  "id": "20251119_172540_777087",
+  "from": "mira",
+  "to": "kuroko2",
+  "message": "test.txt の内容は「Hello MCP」です。",
+  "task_type": "general",
+  "metadata": {
+    "filename": "test.txt"
+  },
+  "timestamp": "2025-11-19T17:25:40.777137",
+  "status": "pending"
+}

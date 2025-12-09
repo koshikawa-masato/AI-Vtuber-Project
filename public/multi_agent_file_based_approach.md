@@ -6,16 +6,13 @@ tags:
   - ChatGPT
   - LLM
   - Claude
-private: true
-updated_at: '2025-11-18T17:57:28+09:00'
+private: false
+updated_at: '2025-11-18T18:00:11+09:00'
 id: 067e33e76092242b481a
 organization_url_name: null
 slide: false
 ignorePublish: false
 ---
-
-# MCPを使わずファイルベースでMulti-Agentを実践した理由 〜私に適した乗り物で道を進む〜
-
 ## はじめに：なぜこの記事を書くのか
 
 ### 背景
@@ -90,7 +87,7 @@ MCP（Model Context Protocol）は、Anthropicが開発したプロトコルで�
 
 今のプロジェクトで必要だったのは：
 
-- 6つのAIの使い分け（Claude Code×2、ChatGPT、Grok、Claude Opus 4.1、人間）
+- 6つのAIの使い分け（Claude Code×2、ChatGPT、Grok、Claude Opus 4.1、人間←私も!?）
 - ファイルベースの情報共有
 - 人間が判断・統括
 
