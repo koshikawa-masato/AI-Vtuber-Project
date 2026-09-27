@@ -1,0 +1,8 @@
+--- a/src/line_bot_vps/webhook_server_vps.py
++++ b/src/line_bot_vps/webhook_server_vps.py
+@@ -469,2 +469,5 @@
+     result = await asyncio.to_thread(privacy_guard.screen, user_message)
++    if result.review_required:
++        send_system_message(user_id, "安全性を確認できないため、処理を保留しました。")
++        return True
+     if result.blocked:

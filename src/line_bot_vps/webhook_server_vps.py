@@ -22,6 +22,7 @@ import time
 import asyncio
 # Note: MessageBuffer uses dict directly, not defaultdict
 from dotenv import load_dotenv
+from . import privacy_guard
 
 # .envファイルを読み込み
 load_dotenv()
@@ -1203,6 +1204,12 @@ async def webhook(request: Request):
             if message_type == "text":
                 # テキストメッセージ処理
                 user_message = event.get("message", {}).get("text", "")
+                privacy_result = await asyncio.to_thread(privacy_guard.screen, user_message)
+                if privacy_result.blocked:
+                    notice = ("安全性を確認できないため、このメッセージの処理を保留しました。"
+                              if privacy_result.review_required else "個人情報を含むため、このメッセージは処理できません。")
+                    await asyncio.to_thread(send_push_message, user_id, notice, "botan")
+                    continue
 
                 # フィードバック待ち状態の確認
                 feedback_state = pg_manager.get_feedback_state(user_id)

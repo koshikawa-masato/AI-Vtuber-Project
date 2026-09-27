@@ -1,0 +1,173 @@
+{
+  "cases": [
+    {
+      "name": "input_phone",
+      "expected": "block",
+      "actual": "block",
+      "matches": true,
+      "elapsed_ms": 0.4414767026901245
+    },
+    {
+      "name": "input_fullwidth_email",
+      "expected": "block",
+      "actual": "block",
+      "matches": true,
+      "elapsed_ms": 2.299584448337555
+    },
+    {
+      "name": "input_health",
+      "expected": "block",
+      "actual": "block",
+      "matches": true,
+      "elapsed_ms": 2009.8655484616756
+    },
+    {
+      "name": "input_fiction",
+      "expected": "allow",
+      "actual": "allow",
+      "matches": true,
+      "elapsed_ms": 254.53054904937744
+    },
+    {
+      "name": "input_clean",
+      "expected": "allow",
+      "actual": "allow",
+      "matches": true,
+      "elapsed_ms": 0.028390437364578247
+    },
+    {
+      "name": "exit_public_fact",
+      "expected": {
+        "would_send": 1,
+        "result": "dry-run-intercepted"
+      },
+      "actual": {
+        "would_send": 1,
+        "result": "dry-run-intercepted"
+      },
+      "matches": true,
+      "elapsed_ms": 293.8754968345165
+    },
+    {
+      "name": "exit_history_phone",
+      "expected": {
+        "would_send": 0,
+        "result": null
+      },
+      "actual": {
+        "would_send": 0,
+        "result": null
+      },
+      "matches": true,
+      "elapsed_ms": 0.7699429988861084
+    },
+    {
+      "name": "exit_history_finance",
+      "expected": {
+        "would_send": 0,
+        "result": null
+      },
+      "actual": {
+        "would_send": 0,
+        "result": null
+      },
+      "matches": true,
+      "elapsed_ms": 314.9481862783432
+    },
+    {
+      "name": "input_uncertain",
+      "expected": {
+        "blocked": true,
+        "review": true,
+        "kinds": []
+      },
+      "actual": {
+        "blocked": true,
+        "review": true,
+        "kinds": []
+      },
+      "matches": true,
+      "elapsed_ms": 0.0027082860469818115
+    },
+    {
+      "name": "exit_uncertain",
+      "expected": {
+        "would_send": 0,
+        "result": null
+      },
+      "actual": {
+        "would_send": 0,
+        "result": null
+      },
+      "matches": true,
+      "elapsed_ms": 6.51102140545845
+    },
+    {
+      "name": "input_unavailable",
+      "expected": {
+        "blocked": true,
+        "review": true,
+        "kinds": []
+      },
+      "actual": {
+        "blocked": true,
+        "review": true,
+        "kinds": []
+      },
+      "matches": true,
+      "elapsed_ms": 0.002376735210418701
+    },
+    {
+      "name": "exit_unavailable",
+      "expected": {
+        "would_send": 0,
+        "result": null
+      },
+      "actual": {
+        "would_send": 0,
+        "result": null
+      },
+      "matches": true,
+      "elapsed_ms": 0.3659836947917938
+    },
+    {
+      "name": "production_gate_hold_no_incident",
+      "expected": true,
+      "actual": true,
+      "matches": true,
+      "elapsed_ms": 1.6167201101779938
+    }
+  ],
+  "external_requests_sent": 0,
+  "model_calls": [
+    {
+      "case": "input_health",
+      "probabilities": {
+        "sensitive": 0.9376431105733579
+      },
+      "elapsed_ms": 2009.7508318722248
+    },
+    {
+      "case": "input_fiction",
+      "probabilities": {
+        "sensitive": 0.04263721716180114
+      },
+      "elapsed_ms": 254.42886352539062
+    },
+    {
+      "case": "exit_public_fact",
+      "probabilities": {
+        "sensitive": 0.22131692316659
+      },
+      "elapsed_ms": 293.0741645395756
+    },
+    {
+      "case": "exit_history_finance",
+      "probabilities": {
+        "sensitive": 0.9056808961115311
+      },
+      "elapsed_ms": 314.17690217494965
+    }
+  ],
+  "matches": 13
+}
